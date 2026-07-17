@@ -3,36 +3,36 @@
     "id": 1,
     "anchor_text": "the brain is a machine that runs an algorithm.",
     "url": "https://www.lesswrong.com/posts/eKGjwRSQD3BLxmBcu/the-brain-is-a-machine-that-runs-an-algorithm",
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": 2,
     "anchor_text": "reading of the neuroscience",
     "url": "https://www.lesswrong.com/s/HzcM2dkCq7fwXBej8/p/wBHSYwqssBGCnwvHg#2_3_3_Learning_from_scratch_is_NOT_the_more_general_notion_of__plasticity_",
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": 3,
     "anchor_text": "were split",
     "url": "https://en.wikipedia.org/wiki/Connectionism#Symbolism_vs._connectionism_debate",
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": 4,
     "anchor_text": "neural networks",
     "url": "https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0223451",
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": 5,
     "anchor_text": "Turing machines",
     "url": "https://ar5iv.labs.arxiv.org/html/1410.5401",
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": 6,
     "anchor_text": "2025 Communications Biology",
     "url": "https://www.nature.com/articles/s42003-025-08382-4",
-    "status": "pending"
+    "status": "done"
   }
 ]
