@@ -39,9 +39,9 @@
         4,
         5
       ],
-      "links_done": 0,
+      "links_done": 19,
       "links_failed": 0,
-      "links_pending": 19,
+      "links_pending": 0,
       "complete": false
     },
     {
@@ -53,9 +53,9 @@
         6,
         7
       ],
-      "links_done": 0,
-      "links_failed": 0,
-      "links_pending": 15,
+      "links_done": 14,
+      "links_failed": 1,
+      "links_pending": 0,
       "complete": false
     },
     {
@@ -64,9 +64,9 @@
       "explanation_status": "pending",
       "link_count": 10,
       "footnotes": [],
-      "links_done": 0,
+      "links_done": 10,
       "links_failed": 0,
-      "links_pending": 10,
+      "links_pending": 0,
       "complete": false
     },
     {
@@ -75,9 +75,9 @@
       "explanation_status": "pending",
       "link_count": 18,
       "footnotes": [],
-      "links_done": 0,
+      "links_done": 18,
       "links_failed": 0,
-      "links_pending": 18,
+      "links_pending": 0,
       "complete": false
     },
     {
@@ -88,9 +88,9 @@
       "footnotes": [
         8
       ],
-      "links_done": 0,
+      "links_done": 9,
       "links_failed": 0,
-      "links_pending": 9,
+      "links_pending": 0,
       "complete": false
     },
     {
@@ -99,9 +99,9 @@
       "explanation_status": "pending",
       "link_count": 12,
       "footnotes": [],
-      "links_done": 0,
+      "links_done": 12,
       "links_failed": 0,
-      "links_pending": 12,
+      "links_pending": 0,
       "complete": false
     }
   ]

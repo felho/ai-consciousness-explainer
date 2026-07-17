@@ -3,114 +3,114 @@
     "id": 1,
     "anchor_text": "here",
     "url": "https://www.lesswrong.com/s/HzcM2dkCq7fwXBej8/p/wBHSYwqssBGCnwvHg#2_5_Evidence_on_whether_the_cortex__striatum__and_cerebellum_learn_from_scratch",
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": 2,
     "anchor_text": "computational neuroscience",
     "url": "https://konklab.fas.harvard.edu/Papers/Doerig_2023_NRN.pdf",
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": 3,
     "anchor_text": "explosion in progress",
     "url": "https://www.mdpi.com/2077-0383/14/2/550",
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": 4,
     "anchor_text": "Study",
     "url": "https://pubmed.ncbi.nlm.nih.gov/31659335/",
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": 5,
     "anchor_text": "study",
     "url": "https://www.nature.com/articles/s41586-024-07633-4",
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": 6,
     "anchor_text": "deep reinforcement learning algorithms",
     "url": "https://www.cell.com/neuron/pdf/S0896-6273(20",
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": 7,
     "anchor_text": "directly parallel",
     "url": "https://onlinelibrary.wiley.com/doi/full/10.1155/hbe2/9946143",
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": 8,
     "anchor_text": "mechanisms",
     "url": "https://www.sciencedirect.com/science/article/pii/S2772528625000354",
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": 9,
     "anchor_text": "brain-computer interfaces",
     "url": "https://x.com/neuralink/status/2055351348728668340",
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": 10,
     "anchor_text": "lossy brain data",
     "url": "https://ai.meta.com/blog/tribe-v2-brain-predictive-foundation-model/",
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": 11,
     "anchor_text": "seeing",
     "url": "https://proceedings.iclr.cc/paper_files/paper/2024/hash/d0865cbe51d35ec322f9af9db7806fc7-Abstract-Conference.html",
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": 12,
     "anchor_text": "thinking",
     "url": "https://www.science.org/doi/10.1126/sciadv.adw1464",
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": 13,
     "anchor_text": "theoretical reason",
     "url": "https://www.secondbest.ca/i/165116190/universality",
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": 14,
     "anchor_text": "surprisingly similar representations",
     "url": "https://www.biorxiv.org/content/10.1101/2022.03.28.485868v2",
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": 15,
     "anchor_text": "Analogous feature hierarchies",
     "url": "https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1011086",
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": 16,
     "anchor_text": "compress data well",
     "url": "https://en.wikipedia.org/wiki/Kolmogorov_complexity",
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": 17,
     "anchor_text": "Platonic Representation Hypothesis",
     "url": "https://arxiv.org/abs/2405.07987",
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": 18,
     "anchor_text": "2024 Nature Neuroscience perspective",
     "url": "https://gershmanlab.com/pubs/Gershman24_dopamine.pdf",
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": 19,
     "anchor_text": "A brain-computer interface that evokes tactile sensations improves robotic arm control",
     "url": "https://www.science.org/doi/10.1126/science.abd0380",
-    "status": "pending"
+    "status": "done"
   }
 ]

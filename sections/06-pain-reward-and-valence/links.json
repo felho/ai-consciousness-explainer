@@ -3,54 +3,54 @@
     "id": 1,
     "anchor_text": "argument",
     "url": "https://gwern.net/backstop#pain-is-the-only-school-teacher",
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": 2,
     "anchor_text": "salient label",
     "url": "https://pubmed.ncbi.nlm.nih.gov/15217324/",
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": 3,
     "anchor_text": "mesa-optimization",
     "url": "https://arxiv.org/abs/1906.01820",
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": 4,
     "anchor_text": "valences may be the way RL inner-aligns AI agents",
     "url": "https://ojs.aaai.org/index.php/AAAI-SS/article/view/42547",
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": 5,
     "anchor_text": "ground truth",
     "url": "https://aeon.co/ideas/is-consciousness-a-battle-between-your-beliefs-and-perceptions",
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": 6,
     "anchor_text": "reality monitor",
     "url": "https://pubmed.ncbi.nlm.nih.gov/35122782/",
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": 7,
     "anchor_text": "visual imagination",
     "url": "https://www.nature.com/articles/s41467-023-37322-1",
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": 8,
     "anchor_text": "schizophrenia",
     "url": "https://www.sciencedirect.com/science/article/pii/S2213158217300268",
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": 9,
     "anchor_text": "The mind is software to the brain’s hardware",
     "url": "https://x.com/hamandcheese/status/1945861349977813067",
-    "status": "pending"
+    "status": "done"
   }
 ]
