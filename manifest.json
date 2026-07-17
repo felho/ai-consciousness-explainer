@@ -6,7 +6,7 @@
     {
       "dir": "sections/00-introduction",
       "title": "Introduction",
-      "explanation_status": "pending",
+      "explanation_status": "done",
       "link_count": 6,
       "footnotes": [
         1
@@ -14,12 +14,12 @@
       "links_done": 6,
       "links_failed": 0,
       "links_pending": 0,
-      "complete": false
+      "complete": true
     },
     {
       "dir": "sections/01-the-brain-is-a-machine-that-runs-an-algorithm",
       "title": "**The brain is a machine that runs an algorithm**",
-      "explanation_status": "pending",
+      "explanation_status": "done",
       "link_count": 6,
       "footnotes": [
         2
@@ -27,12 +27,12 @@
       "links_done": 6,
       "links_failed": 0,
       "links_pending": 0,
-      "complete": false
+      "complete": true
     },
     {
       "dir": "sections/02-the-brain-and-artificial-neural-networks-learn-s",
       "title": "**The brain and artificial neural networks learn similar representations**",
-      "explanation_status": "pending",
+      "explanation_status": "done",
       "link_count": 19,
       "footnotes": [
         3,
@@ -42,12 +42,12 @@
       "links_done": 19,
       "links_failed": 0,
       "links_pending": 0,
-      "complete": false
+      "complete": true
     },
     {
       "dir": "sections/03-pre-training-on-human-data-embeds-brain-like-pri",
       "title": "**Pre-training on human data embeds brain-like priors**",
-      "explanation_status": "pending",
+      "explanation_status": "done",
       "link_count": 15,
       "footnotes": [
         6,
@@ -56,34 +56,34 @@
       "links_done": 14,
       "links_failed": 1,
       "links_pending": 0,
-      "complete": false
+      "complete": true
     },
     {
       "dir": "sections/04-the-self-model-as-the-locus-of-experience",
       "title": "**The self-model as the locus of experience**",
-      "explanation_status": "pending",
+      "explanation_status": "done",
       "link_count": 10,
       "footnotes": [],
       "links_done": 10,
       "links_failed": 0,
       "links_pending": 0,
-      "complete": false
+      "complete": true
     },
     {
       "dir": "sections/05-consciousness-as-supervisor-of-in-context-learni",
       "title": "**Consciousness as supervisor of in-context learning**",
-      "explanation_status": "pending",
+      "explanation_status": "done",
       "link_count": 18,
       "footnotes": [],
       "links_done": 18,
       "links_failed": 0,
       "links_pending": 0,
-      "complete": false
+      "complete": true
     },
     {
       "dir": "sections/06-pain-reward-and-valence",
       "title": "**Pain, reward, and valence**",
-      "explanation_status": "pending",
+      "explanation_status": "done",
       "link_count": 9,
       "footnotes": [
         8
@@ -91,18 +91,18 @@
       "links_done": 9,
       "links_failed": 0,
       "links_pending": 0,
-      "complete": false
+      "complete": true
     },
     {
       "dir": "sections/07-so-are-ais-conscious-or-not",
       "title": "**So are AIs conscious or not?**",
-      "explanation_status": "pending",
+      "explanation_status": "done",
       "link_count": 12,
       "footnotes": [],
       "links_done": 12,
       "links_failed": 0,
       "links_pending": 0,
-      "complete": false
+      "complete": true
     }
   ]
 }
