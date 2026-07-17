@@ -12,10 +12,16 @@ This makes progress independent of any single session: a fresh session runs
 session (or killed agent) produced the existing files.
 
 Usage:
-  python3 bin/status.py            # human-readable progress table
-  python3 bin/status.py --json     # machine-readable state
-  python3 bin/status.py --next     # print the next pending section dir (for dispatch)
-  python3 bin/status.py --reconcile  # rewrite links.json + manifest.json to match the filesystem
+  python3 bin/status.py                    # human-readable progress table
+  python3 bin/status.py --json             # machine-readable state
+  python3 bin/status.py --next             # print the next pending section dir (for dispatch)
+  python3 bin/status.py --reconcile        # rewrite links.json + manifest.json to match the filesystem
+  python3 bin/status.py --list-links       # every link as an addressable unit: "<sec> <id> <state> <url>"
+  python3 bin/status.py --list-links --section 00   # only that section (prefix match on the dir name)
+  python3 bin/status.py --list-links --pending      # only links that are not done yet
+
+An addressable link unit is "<section-name> <id>", e.g. "00-introduction 1".
+That is what you name when dispatching a single-link subagent (see PIPELINE.md).
 """
 import glob
 import json
@@ -94,12 +100,34 @@ def reconcile(state):
     print("Reconciled links.json (all sections) + manifest.json to filesystem state.")
 
 
+def _opt_value(argv, name):
+    """Return the value following `name` in argv, or None."""
+    if name in argv:
+        i = argv.index(name)
+        if i + 1 < len(argv):
+            return argv[i + 1]
+    return None
+
+
 def main():
-    args = set(sys.argv[1:])
+    argv = sys.argv[1:]
+    args = set(argv)
     state = scan()
 
     if "--reconcile" in args:
         reconcile(state)
+        return
+
+    if "--list-links" in args:
+        section_prefix = _opt_value(argv, "--section")
+        only_pending = "--pending" in args
+        for s in state:
+            if section_prefix and not s["name"].startswith(section_prefix):
+                continue
+            for link, st in s["link_states"]:
+                if only_pending and st == "done":
+                    continue
+                print(f"{s['name']} {link['id']} {st} {link['url']}")
         return
 
     if "--json" in args:

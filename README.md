@@ -55,8 +55,17 @@ python3 bin/status.py            # what's done / pending (derived from the files
 python3 bin/status.py --next     # the next incomplete section directory
 ```
 
-Then follow **[PIPELINE.md](PIPELINE.md)**: it holds the exact per-section
-subagent prompt and the dispatch loop. After agents run:
+Then follow **[PIPELINE.md](PIPELINE.md)**: it holds the exact subagent prompts
+and the dispatch loop. You can run a whole section, or scope down to a single
+link (`<section-name> <id>`, e.g. `00-introduction 1`) or just a section's
+explanation:
+
+```bash
+python3 bin/status.py --list-links --section 00   # addressable link units + urls
+python3 bin/status.py --list-links --pending      # everything not done yet
+```
+
+After agents run:
 
 ```bash
 python3 bin/status.py --reconcile   # sync links.json + manifest.json to the files on disk
