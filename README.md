@@ -45,8 +45,31 @@ Section `00-introduction` is the text before the first H2. Section
                 clearly marked as such. No silent skips: every link ends up
                 either `done` or `failed` with a reason.
 
-## Pipeline
+## Resume in a fresh session
+
+Everything needed to continue is in this repo — no session memory required.
+
+```bash
+cd ~/dev/ai-consciousness-explainer
+python3 bin/status.py            # what's done / pending (derived from the filesystem)
+python3 bin/status.py --next     # the next incomplete section directory
+```
+
+Then follow **[PIPELINE.md](PIPELINE.md)**: it holds the exact per-section
+subagent prompt and the dispatch loop. After agents run:
+
+```bash
+python3 bin/status.py --reconcile   # sync links.json + manifest.json to the files on disk
+python3 bin/status.py               # confirm, then commit
+```
+
+`bin/status.py` treats the **filesystem as ground truth**, so a half-finished or
+killed agent never corrupts the tracking: just re-run status and re-dispatch
+whatever is still pending.
+
+## Pipeline phases
 
 1. `parse_article.py` (session scratchpad) built this scaffold from the HTML.
-2. One subagent per section writes `explanation.md` and processes all links.
+2. One subagent per section writes `explanation.md` and processes all links
+   (see PIPELINE.md). Sections are independent and can run in parallel.
 3. Final phase (not started): assemble the HTML page from the pieces.
