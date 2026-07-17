@@ -28,5 +28,11 @@
     "anchor_text": "Turing machines",
     "url": "https://ar5iv.labs.arxiv.org/html/1410.5401",
     "status": "pending"
+  },
+  {
+    "id": 6,
+    "anchor_text": "2025 Communications Biology",
+    "url": "https://www.nature.com/articles/s42003-025-08382-4",
+    "status": "pending"
   }
 ]

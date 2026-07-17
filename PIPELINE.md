@@ -27,6 +27,15 @@ Ground truth is the **filesystem**, derived by `bin/status.py`:
 killed/half-finished agent never leaves the tracking in a wrong state — just
 re-run status and re-dispatch whatever is still pending.
 
+## Footnotes
+
+Each `section.md` may contain inline footnote markers like `competency.[1]` at the
+reference point, and a `## Lábjegyzetek (az eredeti cikkből)` block at the end with
+the matching `[N]: ...` definitions. Footnotes live in the section where they are
+referenced (a footnote's own links are already included in that section's
+`links.json`). When writing `explanation.md`, treat footnotes as part of the
+section; you may reference them by number if useful.
+
 ## Language rule
 - Explanations and link summaries: **Hungarian** (written for the reader).
 - Original article text (`section.md`, `source/`): leave as published (English).

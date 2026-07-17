@@ -100,5 +100,17 @@
     "anchor_text": "Platonic Representation Hypothesis",
     "url": "https://arxiv.org/abs/2405.07987",
     "status": "pending"
+  },
+  {
+    "id": 18,
+    "anchor_text": "2024 Nature Neuroscience perspective",
+    "url": "https://gershmanlab.com/pubs/Gershman24_dopamine.pdf",
+    "status": "pending"
+  },
+  {
+    "id": 19,
+    "anchor_text": "A brain-computer interface that evokes tactile sensations improves robotic arm control",
+    "url": "https://www.science.org/doi/10.1126/science.abd0380",
+    "status": "pending"
   }
 ]
