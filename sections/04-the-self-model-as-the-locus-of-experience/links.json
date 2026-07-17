@@ -1,0 +1,62 @@
+[
+  {
+    "id": 1,
+    "anchor_text": "more coherent self-model",
+    "url": "https://arxiv.org/abs/2605.25459",
+    "status": "pending"
+  },
+  {
+    "id": 2,
+    "anchor_text": "larger models",
+    "url": "https://arxiv.org/abs/2201.11903",
+    "status": "pending"
+  },
+  {
+    "id": 3,
+    "anchor_text": "theory of mind",
+    "url": "https://arxiv.org/abs/2505.00026",
+    "status": "pending"
+  },
+  {
+    "id": 4,
+    "anchor_text": "Persona Selection Model",
+    "url": "https://www.anthropic.com/research/persona-selection-model",
+    "status": "pending"
+  },
+  {
+    "id": 5,
+    "anchor_text": "previous essay",
+    "url": "https://www.secondbest.ca/p/do-llms-really-reason",
+    "status": "pending"
+  },
+  {
+    "id": 6,
+    "anchor_text": "Normative control",
+    "url": "https://www.jstor.org/stable/3505088",
+    "status": "pending"
+  },
+  {
+    "id": 7,
+    "anchor_text": "self-monitoring",
+    "url": "https://arxiv.org/abs/2505.18807",
+    "status": "pending"
+  },
+  {
+    "id": 8,
+    "anchor_text": "introspection",
+    "url": "https://www.anthropic.com/research/introspection",
+    "status": "pending"
+  },
+  {
+    "id": 9,
+    "anchor_text": "normative statuses",
+    "url": "https://sites.pitt.edu/~rbrandom/Courses/Antirepresentationalism%20(2020",
+    "status": "pending"
+  },
+  {
+    "id": 10,
+    "anchor_text": "Attention Schema Theory",
+    "url": "https://en.wikipedia.org/wiki/Attention_schema_theory",
+    "status": "pending"
+  }
+]

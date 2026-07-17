@@ -1,0 +1,38 @@
+[
+  {
+    "id": 1,
+    "anchor_text": "apophenia",
+    "url": "https://en.wikipedia.org/wiki/Apophenia",
+    "status": "pending"
+  },
+  {
+    "id": 2,
+    "anchor_text": "pareidolia",
+    "url": "https://en.wikipedia.org/wiki/Pareidolia",
+    "status": "pending"
+  },
+  {
+    "id": 3,
+    "anchor_text": "greater research",
+    "url": "https://eleosai.org/",
+    "status": "pending"
+  },
+  {
+    "id": 4,
+    "anchor_text": "quit distressing conversations",
+    "url": "https://www.anthropic.com/research/end-subset-conversations",
+    "status": "pending"
+  },
+  {
+    "id": 5,
+    "anchor_text": "question-begging",
+    "url": "https://x.com/lucasmeijer/status/2050890323920859601",
+    "status": "pending"
+  },
+  {
+    "id": 6,
+    "anchor_text": "impossibility",
+    "url": "https://www.nature.com/articles/s41599-025-05868-8",
+    "status": "pending"
+  }
+]

@@ -1,0 +1,110 @@
+[
+  {
+    "id": 1,
+    "anchor_text": "Joscha Bach",
+    "url": "https://cimc.ai/cimcHypothesis.pdf",
+    "status": "pending"
+  },
+  {
+    "id": 2,
+    "anchor_text": "coherence inducing operator",
+    "url": "https://www.youtube.com/watch?v=qoHCQ1ozswA",
+    "status": "pending"
+  },
+  {
+    "id": 3,
+    "anchor_text": "Attention Schema Theory",
+    "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC4407481/",
+    "status": "pending"
+  },
+  {
+    "id": 4,
+    "anchor_text": "prefrontal cortex",
+    "url": "https://www.nature.com/articles/s41467-025-61399-5",
+    "status": "pending"
+  },
+  {
+    "id": 5,
+    "anchor_text": "temporoparietal junction and superior temporal sulcus",
+    "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC7713666/",
+    "status": "pending"
+  },
+  {
+    "id": 6,
+    "anchor_text": "Consciousness Engineered",
+    "url": "https://grazianolab.princeton.edu/sites/g/files/toruqf3411/files/graziano/files/jcs_graziano_2016.pdf",
+    "status": "pending"
+  },
+  {
+    "id": 7,
+    "anchor_text": "activation drop",
+    "url": "https://www.jneurosci.org/content/25/22/5356",
+    "status": "pending"
+  },
+  {
+    "id": 8,
+    "anchor_text": "protein synthesis",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/18309046/",
+    "status": "pending"
+  },
+  {
+    "id": 9,
+    "anchor_text": "hours",
+    "url": "https://elifesciences.org/articles/46356",
+    "status": "pending"
+  },
+  {
+    "id": 10,
+    "anchor_text": "synaptic dynamics",
+    "url": "https://www.science.org/doi/10.1126/science.1150769",
+    "status": "pending"
+  },
+  {
+    "id": 11,
+    "anchor_text": "during sleep",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/8036517/",
+    "status": "pending"
+  },
+  {
+    "id": 12,
+    "anchor_text": "hippocampal replay",
+    "url": "https://www.nature.com/articles/nn1825",
+    "status": "pending"
+  },
+  {
+    "id": 13,
+    "anchor_text": "cortical reactivation",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/24904169/",
+    "status": "pending"
+  },
+  {
+    "id": 14,
+    "anchor_text": "analog",
+    "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC3921176/",
+    "status": "pending"
+  },
+  {
+    "id": 15,
+    "anchor_text": "tagged experiences",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/9020359/",
+    "status": "pending"
+  },
+  {
+    "id": 16,
+    "anchor_text": "gradient learning",
+    "url": "https://arxiv.org/abs/2212.07677",
+    "status": "pending"
+  },
+  {
+    "id": 17,
+    "anchor_text": "virtual",
+    "url": "https://arxiv.org/abs/2102.11174",
+    "status": "pending"
+  },
+  {
+    "id": 18,
+    "anchor_text": "complementary learning system",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/22141588/",
+    "status": "pending"
+  }
+]

@@ -1,0 +1,55 @@
+{
+  "article_url": "https://www.secondbest.ca/p/time-to-take-ai-consciousness-seriously",
+  "title": "Time to Take AI Consciousness Seriously",
+  "subtitle": "The case for Claude and ChatGPT having subjective experiences",
+  "sections": [
+    {
+      "dir": "sections/00-introduction",
+      "title": "Introduction",
+      "explanation_status": "pending",
+      "link_count": 6
+    },
+    {
+      "dir": "sections/01-the-brain-is-a-machine-that-runs-an-algorithm",
+      "title": "**The brain is a machine that runs an algorithm**",
+      "explanation_status": "pending",
+      "link_count": 5
+    },
+    {
+      "dir": "sections/02-the-brain-and-artificial-neural-networks-learn-s",
+      "title": "**The brain and artificial neural networks learn similar representations**",
+      "explanation_status": "pending",
+      "link_count": 17
+    },
+    {
+      "dir": "sections/03-pre-training-on-human-data-embeds-brain-like-pri",
+      "title": "**Pre-training on human data embeds brain-like priors**",
+      "explanation_status": "pending",
+      "link_count": 13
+    },
+    {
+      "dir": "sections/04-the-self-model-as-the-locus-of-experience",
+      "title": "**The self-model as the locus of experience**",
+      "explanation_status": "pending",
+      "link_count": 10
+    },
+    {
+      "dir": "sections/05-consciousness-as-supervisor-of-in-context-learni",
+      "title": "**Consciousness as supervisor of in-context learning**",
+      "explanation_status": "pending",
+      "link_count": 18
+    },
+    {
+      "dir": "sections/06-pain-reward-and-valence",
+      "title": "**Pain, reward, and valence**",
+      "explanation_status": "pending",
+      "link_count": 9
+    },
+    {
+      "dir": "sections/07-so-are-ais-conscious-or-not",
+      "title": "**So are AIs conscious or not?**",
+      "explanation_status": "pending",
+      "link_count": 17
+    }
+  ]
+}

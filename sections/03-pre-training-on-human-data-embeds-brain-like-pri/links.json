@@ -1,0 +1,80 @@
+[
+  {
+    "id": 1,
+    "anchor_text": "underlying generator function",
+    "url": "https://www.secondbest.ca/i/137284619/agi-as-a-human-emulator",
+    "status": "pending"
+  },
+  {
+    "id": 2,
+    "anchor_text": "Goldstein et al.",
+    "url": "https://www.nature.com/articles/s41593-022-01026-4",
+    "status": "pending"
+  },
+  {
+    "id": 3,
+    "anchor_text": "2024 study",
+    "url": "https://arxiv.org/pdf/2410.19542",
+    "status": "pending"
+  },
+  {
+    "id": 4,
+    "anchor_text": "TopoLM",
+    "url": "https://openreview.net/pdf?id=aWXnKanInf",
+    "status": "pending"
+  },
+  {
+    "id": 5,
+    "anchor_text": "simulator theory",
+    "url": "https://www.lesswrong.com/w/simulator-theory",
+    "status": "pending"
+  },
+  {
+    "id": 6,
+    "anchor_text": "emotions",
+    "url": "https://www.anthropic.com/research/emotion-concepts-function",
+    "status": "pending"
+  },
+  {
+    "id": 7,
+    "anchor_text": "were found",
+    "url": "https://www.nature.com/articles/s42256-025-01072-0",
+    "status": "pending"
+  },
+  {
+    "id": 8,
+    "anchor_text": "semantic system",
+    "url": "https://www.nature.com/articles/nature17637",
+    "status": "pending"
+  },
+  {
+    "id": 9,
+    "anchor_text": "brain-like functions",
+    "url": "https://arxiv.org/abs/2508.10057",
+    "status": "pending"
+  },
+  {
+    "id": 10,
+    "anchor_text": "instruction tuning",
+    "url": "https://arxiv.org/abs/2312.00575",
+    "status": "pending"
+  },
+  {
+    "id": 11,
+    "anchor_text": "cognitive control",
+    "url": "https://arxiv.org/html/2503.01830",
+    "status": "pending"
+  },
+  {
+    "id": 12,
+    "anchor_text": "reasoning capabilities",
+    "url": "https://transformer-circuits.pub/2025/attribution-graphs/biology.html",
+    "status": "pending"
+  },
+  {
+    "id": 13,
+    "anchor_text": "distinct reasoning circuits",
+    "url": "https://www.notion.so/conscious-28ce259d26b6808cb96cc1dc679576eb?pvs=21",
+    "status": "pending"
+  }
+]

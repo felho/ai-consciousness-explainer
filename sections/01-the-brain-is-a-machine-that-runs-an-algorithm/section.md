@@ -1,0 +1,13 @@
+# **The brain is a machine that runs an algorithm**
+
+The AI researcher, Steven Byrnes, has a nice motto: “[the brain is a machine that runs an algorithm.](https://www.lesswrong.com/posts/eKGjwRSQD3BLxmBcu/the-brain-is-a-machine-that-runs-an-algorithm)” By this, he does not mean that the brain is a classical computer, or that the algorithm the brain runs is simple, or that the brain isn’t also many other things: a gland, a light sensor, a muscle contractor, etc. Rather, it is simply a reminder that:
+1. 
+
+the brain and its components are part of the natural universe, operating in a way compatible with the laws of physics and chemistry; and
+1. 
+
+a minority of what the brain does is hardwired by evolution, with the rest dedicated to general learning algorithms.
+
+This latter proposition may be more controversial. In Byrnes’ somewhat iconoclastic [reading of the neuroscience](https://www.lesswrong.com/s/HzcM2dkCq7fwXBej8/p/wBHSYwqssBGCnwvHg#2_3_3_Learning_from_scratch_is_NOT_the_more_general_notion_of__plasticity_), “much of the brain (>90% by volume) exists solely to run learning-from-scratch algorithms—namely, roughly the cortex, striatum, and cerebellum, but defined broadly so as to also include the amygdala, nucleus accumbens, hippocampus, and more.” By “learning-from-scratch” algorithms, he means end-to-end learning subsystems that are initialized in a way analogous to the initialization of an artificial neural network. This does not make the brain a “blank slate” or imply that nature is secondary to nurture. Nature and nurture are instead tightly coupled: genetic hardcoding influences the algorithms, architectures, and hyperparameters that guide subsequent learning, while a handful of “controlling subsystems” in the brainstem and elsewhere come equipped with impressive functionality at birth.
+
+In the ‘80s and ‘90s, cognitive scientists [were split](https://en.wikipedia.org/wiki/Connectionism#Symbolism_vs._connectionism_debate) between connectionists and symbolists. The former viewed the brain as machinery for statistical learning, while the latter argued that the brain performs formal operations on symbols, like a Turing machine. But the two are not in opposition. The brain likely implements both symbolic and statistical learning processes, while [neural networks](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0223451) can themselves approximate [Turing machines](https://ar5iv.labs.arxiv.org/html/1410.5401) and vice versa. Nevertheless, given that the human genome has only 3 billion base pairs relative to the 100 trillion synapses of an adult human brain, it stands to reason that most of the brain’s realized competence is indeed “learned from scratch” in Byrnes’s specific sense.
