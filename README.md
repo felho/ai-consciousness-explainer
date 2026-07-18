@@ -5,8 +5,8 @@ Building blocks for an explanatory HTML page based on the essay
 (Second Best / Samuel Hammond).
 
 Goal: break the (dense) essay into digestible pieces so a layman reader can
-understand each section and each cited source. The final HTML page will be
-assembled from these pieces in a later phase.
+understand each section and each cited source. The final HTML page is assembled
+from these pieces by `bin/build_html.py` into `build/index.html`.
 
 ## Language convention
 
@@ -81,4 +81,8 @@ whatever is still pending.
 1. `parse_article.py` (session scratchpad) built this scaffold from the HTML.
 2. One subagent per section writes `explanation.md` and processes all links
    (see PIPELINE.md). Sections are independent and can run in parallel.
-3. Final phase (not started): assemble the HTML page from the pieces.
+3. `bin/build_html.py` assembles the pieces into a single self-contained
+   `build/index.html`: each section's original English text, the original image
+   inline, the Hungarian explanation below it, and a hover card on every source
+   link showing that link's full Hungarian summary. Images are embedded as data
+   URIs read from `build/assets/`.
