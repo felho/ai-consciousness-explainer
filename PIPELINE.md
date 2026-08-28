@@ -39,6 +39,10 @@ section; you may reference them by number if useful.
 ## Language rule
 - Explanations and link summaries: **Hungarian** (written for the reader).
 - Original article text (`section.md`, `source/`): leave as published (English).
+- Section translations (`section.hu.md`): Hungarian, faithful, structure mirrors
+  `section.md` 1:1 (byte-identical URLs, verbatim image markdown, footnote
+  markers in place) so `build_html.py` can render both variants with the
+  per-section EN/HU toggle.
 - Avoid em dashes in Hungarian prose; no AI-tell phrasing.
 
 ## Per-section subagent prompt template
@@ -163,4 +167,6 @@ Same as the full template but with only step 2 (write `explanation.md`); skip al
 link processing. Useful to draft/redo a section's explanation without re-fetching links.
 
 ## Status
-Run `python3 bin/status.py` for live progress. Nothing is complete yet (0/8).
+Run `python3 bin/status.py` for live progress. All 8 sections are complete
+(explanations, link summaries, Hungarian translations); `build/index.html` is
+assembled. Remaining work, if any, shows up in the status output.

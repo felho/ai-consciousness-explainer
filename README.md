@@ -11,6 +11,9 @@ from these pieces by `bin/build_html.py` into `build/index.html`.
 ## Language convention
 
 - Original article text (`section.md`, `source/`): English (as published).
+- Section translations (`section.hu.md`): **Hungarian**, faithful translation of
+  `section.md`, structure mirrored 1:1 (same links/URLs, images, footnote markers)
+  so the HTML builder can render both language variants.
 - Explanations and link summaries (`explanation.md`, `links/*/summary.md`): **Hungarian**
   (they are written for the reader, whose working language is Hungarian).
 - Everything else (code, README, manifest): English.
@@ -25,6 +28,7 @@ source/
 sections/
   <nn>-<slug>/
     section.md                 # original English text of the H2 section
+    section.hu.md              # Hungarian translation of section.md (1:1 structure)
     links.json                 # links found in this section (id, anchor_text, url, status)
     explanation.md             # layman-friendly Hungarian explanation of the section
     links/
@@ -81,8 +85,11 @@ whatever is still pending.
 1. `parse_article.py` (session scratchpad) built this scaffold from the HTML.
 2. One subagent per section writes `explanation.md` and processes all links
    (see PIPELINE.md). Sections are independent and can run in parallel.
-3. `bin/build_html.py` assembles the pieces into a single self-contained
-   `build/index.html`: each section's original English text, the original image
-   inline, the Hungarian explanation below it, and a hover card on every source
-   link showing that link's full Hungarian summary. Images are embedded as data
-   URIs read from `build/assets/`.
+3. One subagent per section translates `section.md` to `section.hu.md`
+   (reviewed by fidelity / language-quality / terminology subagent passes).
+4. `bin/build_html.py` assembles the pieces into a single self-contained
+   `build/index.html`: each section's original English text with a per-section
+   EN/HU toggle (English default) switching to the Hungarian translation, the
+   original image inline, the Hungarian explanation below it, and a hover card
+   on every source link showing that link's full Hungarian summary. Images are
+   embedded as data URIs (stored once, referenced by both language variants).

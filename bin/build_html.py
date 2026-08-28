@@ -4,6 +4,8 @@
 For each section, in order:
   - the original English text (from section.md), exactly as published, with the
     original image embedded inline as a data URI;
+  - a Hungarian translation of the section (section.hu.md), switchable per
+    section via a small EN/HU toggle (English is the default);
   - below it, the Hungarian explanation (explanation.md), in a tinted panel;
   - every source link becomes a hover card showing that link's full Hungarian
     summary (from links/<id>-*/summary.md).
@@ -33,6 +35,7 @@ SUBSTACK_ID_RE = re.compile(r"images%2F([0-9a-fA-F-]+)_")
 FN_MARKER_RE = re.compile(r"\[(\d+)\]")
 
 CARDS = {}  # cardId -> rendered summary HTML (fed to JS)
+IMGS = {}  # imageId -> data URI (fed to JS; stored once, referenced by both language variants)
 
 
 def read(path):
@@ -40,13 +43,20 @@ def read(path):
         return fh.read()
 
 
+_DATA_URI_CACHE = {}  # image_id -> data URI (each image appears in both language variants)
+
+
 def data_uri_for(image_id):
+    if image_id in _DATA_URI_CACHE:
+        return _DATA_URI_CACHE[image_id]
     matches = glob.glob(os.path.join(ASSETS_DIR, image_id + ".*"))
     if not matches:
         return None
     raw = open(matches[0], "rb").read()
     mime = "image/png" if raw[:8] == b"\x89PNG\r\n\x1a\n" else "image/jpeg"
-    return "data:%s;base64,%s" % (mime, base64.b64encode(raw).decode("ascii"))
+    uri = "data:%s;base64,%s" % (mime, base64.b64encode(raw).decode("ascii"))
+    _DATA_URI_CACHE[image_id] = uri
+    return uri
 
 
 def emphasize(escaped):
@@ -55,7 +65,7 @@ def emphasize(escaped):
     return escaped
 
 
-def render_inline(text, linkmap, sec_idx):
+def render_inline(text, linkmap, sec_idx, lang="en"):
     """Inline markdown -> HTML: links (with cards), emphasis, footnote markers.
     Images must already be stripped out before calling this."""
     stash = []
@@ -80,15 +90,15 @@ def render_inline(text, linkmap, sec_idx):
     text = html.escape(text)
     text = emphasize(text)
     text = FN_MARKER_RE.sub(
-        lambda m: '<sup class="fn"><a href="#fn-%d-%s">%s</a></sup>'
-        % (sec_idx, m.group(1), m.group(1)),
+        lambda m: '<sup class="fn"><a href="#fn-%s-%d-%s">%s</a></sup>'
+        % (lang, sec_idx, m.group(1), m.group(1)),
         text,
     )
     text = re.sub(r"\x00L(\d+)\x00", lambda m: stash[int(m.group(1))], text)
     return text
 
 
-def render_body(body, linkmap, sec_idx):
+def render_body(body, linkmap, sec_idx, lang="en"):
     """Render a section body (paragraphs, inline images, subheadings)."""
     out = []
     for block in re.split(r"\n\s*\n", body.strip()):
@@ -96,7 +106,7 @@ def render_body(body, linkmap, sec_idx):
         if not block:
             continue
         if block.startswith("## "):
-            out.append("<h3>%s</h3>" % render_inline(block[3:], linkmap, sec_idx))
+            out.append("<h3>%s</h3>" % render_inline(block[3:], linkmap, sec_idx, lang))
             continue
         figures = []
 
@@ -105,13 +115,14 @@ def render_body(body, linkmap, sec_idx):
             sid = SUBSTACK_ID_RE.search(url)
             src = data_uri_for(sid.group(1)) if sid else None
             if src:
-                figures.append('<figure><img src="%s" alt=""></figure>' % src)
+                IMGS[sid.group(1)] = src
+                figures.append('<figure><img data-img="%s" alt=""></figure>' % sid.group(1))
             return ""
 
         block = IMG_RE.sub(take_image, block)
         block = block.strip()
         if block:
-            out.append("<p>%s</p>" % render_inline(block, linkmap, sec_idx))
+            out.append("<p>%s</p>" % render_inline(block, linkmap, sec_idx, lang))
         out.extend(figures)
     return "\n".join(out)
 
@@ -181,8 +192,8 @@ def build_linkmap(section_dir):
     return linkmap
 
 
-def parse_section(section_dir):
-    md = read(os.path.join(section_dir, "section.md"))
+def parse_section(section_dir, fname="section.md"):
+    md = read(os.path.join(section_dir, fname))
     body, footnotes = md, ""
     m = re.search(r"^##\s*Lábjegyzetek.*$", md, re.MULTILINE)
     if m:
@@ -201,6 +212,28 @@ def parse_footnotes(text):
     return notes
 
 
+FN_TITLES = {"en": "Footnotes (from the original article)",
+             "hu": "Lábjegyzetek (az eredeti cikkből)"}
+
+
+def render_variant(sdir, fname, linkmap, si, lang):
+    """Render one language variant of a section -> (title, article inner HTML)."""
+    title, body, fn_text = parse_section(sdir, fname)
+    body_html = render_body(body, linkmap, si, lang)
+
+    fn_html = ""
+    notes = parse_footnotes(fn_text)
+    if notes:
+        items = []
+        for num, txt in notes:
+            items.append('<li id="fn-%s-%d-%s"><span class="fn-num">%s</span> %s</li>'
+                         % (lang, si, num, num, render_inline(txt, linkmap, si, lang)))
+        fn_html = ('<div class="footnotes"><h4>%s</h4>'
+                   '<ol class="fn-list">%s</ol></div>' % (FN_TITLES[lang], "".join(items)))
+
+    return title, "<h2>%s</h2>%s%s" % (html.escape(title), body_html, fn_html)
+
+
 def main():
     section_dirs = sorted(
         d for d in glob.glob(os.path.join(SECTIONS_DIR, "*")) if os.path.isdir(d)
@@ -209,43 +242,45 @@ def main():
     sections_html = []
     for si, sdir in enumerate(section_dirs):
         linkmap = build_linkmap(sdir)
-        title, body, fn_text = parse_section(sdir)
-        exp = read(os.path.join(sdir, "explanation.md"))
         anchor_id = "sec-%d" % si
+
+        title, en_html = render_variant(sdir, "section.md", linkmap, si, "en")
         toc.append('<li><a href="#%s">%s</a></li>' % (anchor_id, html.escape(title)))
 
-        body_html = render_body(body, linkmap, si)
-        exp_html = render_explanation(exp)
+        toggle = ""
+        articles = '<article class="orig lang-en">%s</article>' % en_html
+        if os.path.exists(os.path.join(sdir, "section.hu.md")):
+            _, hu_html = render_variant(sdir, "section.hu.md", linkmap, si, "hu")
+            toggle = (
+                '<div class="lang-toggle" role="group" aria-label="Nyelv">'
+                '<button class="lang-btn active" data-lang="en">EN</button>'
+                '<button class="lang-btn" data-lang="hu">HU</button></div>'
+            )
+            articles += '<article class="orig lang-hu" hidden>%s</article>' % hu_html
 
-        fn_html = ""
-        notes = parse_footnotes(fn_text)
-        if notes:
-            items = []
-            for num, txt in notes:
-                items.append('<li id="fn-%d-%s"><span class="fn-num">%s</span> %s</li>'
-                             % (si, num, num, render_inline(txt, linkmap, si)))
-            fn_html = ('<div class="footnotes"><h4>Lábjegyzetek (az eredeti cikkből)</h4>'
-                       '<ol class="fn-list">%s</ol></div>' % "".join(items))
-
+        exp_html = render_explanation(read(os.path.join(sdir, "explanation.md")))
         sections_html.append(
             '<section id="%s" class="sec">'
-            '<div class="sec-num">%02d</div>'
-            '<article class="orig"><h2>%s</h2>%s%s</article>'
+            '<div class="sec-head"><div class="sec-num">%02d</div>%s</div>'
+            '%s'
             '<aside class="exp"><div class="exp-tag">Magyarázat</div>%s</aside>'
             "</section>"
-            % (anchor_id, si, html.escape(title), body_html, fn_html, exp_html)
+            % (anchor_id, si, toggle, articles, exp_html)
         )
 
     cards_json = json.dumps(CARDS, ensure_ascii=False).replace("</", "<\\/")
+    imgs_json = json.dumps(IMGS, ensure_ascii=False).replace("</", "<\\/")
     page = PAGE_TEMPLATE.format(
         toc="\n".join(toc),
         sections="\n".join(sections_html),
         cards=cards_json,
+        imgs=imgs_json,
     )
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, "w", encoding="utf-8") as fh:
         fh.write(page)
-    print("Wrote %s (%d sections, %d link cards)" % (OUT, len(section_dirs), len(CARDS)))
+    print("Wrote %s (%d sections, %d link cards, %d images)"
+          % (OUT, len(section_dirs), len(CARDS), len(IMGS)))
 
 
 PAGE_TEMPLATE = r"""<!doctype html>
@@ -295,7 +330,13 @@ nav.toc a{{color:var(--accent);text-decoration:none}}
 nav.toc a:hover{{text-decoration:underline}}
 main{{max-width:820px;margin:0 auto;padding:8px 24px 80px}}
 .sec{{padding:40px 0;border-bottom:1px solid var(--rule);position:relative}}
-.sec-num{{font-family:ui-monospace,Menlo,monospace;font-size:13px;letter-spacing:.12em;color:var(--muted);margin-bottom:6px}}
+.sec-head{{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}}
+.sec-num{{font-family:ui-monospace,Menlo,monospace;font-size:13px;letter-spacing:.12em;color:var(--muted)}}
+.lang-toggle{{display:inline-flex;border:1px solid var(--rule);border-radius:16px;overflow:hidden}}
+.lang-btn{{border:0;background:transparent;color:var(--muted);padding:3px 12px;font-size:12px;
+  font-weight:600;letter-spacing:.06em;cursor:pointer;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}}
+.lang-btn.active{{background:var(--accent);color:var(--bg)}}
 .orig h2{{font-size:25px;line-height:1.25;margin:0 0 18px}}
 .orig p{{margin:0 0 18px}}
 .orig h3{{font-size:19px;margin:26px 0 12px}}
@@ -346,7 +387,7 @@ aside.exp li{{margin:0 0 6px}}
 <button class="themebtn" id="themebtn" title="Világos/sötét">◐ téma</button>
 <header class="top">
   <h1>Time to Take AI Consciousness Seriously</h1>
-  <p class="lede">Az esszé (Second Best / Samuel Hammond) szakaszonként: eredeti angol szöveg, alatta magyar magyarázat. A forráshivatkozások fölé húzva a linkhez tartozó teljes magyar összefoglaló jelenik meg.</p>
+  <p class="lede">Az esszé (Second Best / Samuel Hammond) szakaszonként: eredeti angol szöveg (az EN/HU kapcsolóval szakaszonként magyar fordításra váltható), alatta magyar magyarázat. A forráshivatkozások fölé húzva a linkhez tartozó teljes magyar összefoglaló jelenik meg.</p>
   <p class="byline">Eredeti: <a class="ext" href="https://www.secondbest.ca/p/time-to-take-ai-consciousness-seriously" target="_blank" rel="noopener">secondbest.ca</a></p>
 </header>
 <nav class="toc"><ol>{toc}</ol></nav>
@@ -356,7 +397,25 @@ aside.exp li{{margin:0 0 6px}}
 <div id="tip"></div>
 <script>
 const CARDS = {cards};
+const IMGS = {imgs};
 (function(){{
+  document.querySelectorAll('img[data-img]').forEach(function(img){{
+    const src = IMGS[img.getAttribute('data-img')];
+    if (src) img.src = src;
+  }});
+  document.querySelectorAll('.sec').forEach(function(sec){{
+    const btns = sec.querySelectorAll('.lang-btn');
+    if (!btns.length) return;
+    btns.forEach(function(btn){{
+      btn.addEventListener('click', function(){{
+        const lang = btn.getAttribute('data-lang');
+        btns.forEach(function(b){{ b.classList.toggle('active', b === btn); }});
+        sec.querySelectorAll('article.orig').forEach(function(art){{
+          art.hidden = !art.classList.contains('lang-' + lang);
+        }});
+      }});
+    }});
+  }});
   const tip = document.getElementById('tip');
   let hideTimer = null, overTip = false, curr = null;
   function place(el){{
