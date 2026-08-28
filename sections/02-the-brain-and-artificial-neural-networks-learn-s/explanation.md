@@ -1,13 +1,13 @@
 # The brain and artificial neural networks learn similar representations — magyarázat
 
-Ez a szakasz azt a kérdést járja körül, hogy az emberi agy és a mesterséges neurális hálózatok (a mai MI-modellek alapját adó, agyi idegsejt-hálózatok mintájára épített számítási rendszerek) vajon hasonló módon dolgoznak-e fel információt. A központi állítás: igen. Nemcsak hasonló tanulási algoritmusokat futtatnak, hanem gyakran szó szerint hasonló belső "reprezentációkat" (a beérkező adat tömörített, belső leképezéseit) is kialakítanak.
+Ez a szakasz azt a kérdést járja körül, hogy az emberi agy és a mesterséges neurális hálózatok (a mai AI-modellek alapját adó, agyi idegsejt-hálózatok mintájára épített számítási rendszerek) vajon hasonló módon dolgoznak-e fel információt. A központi állítás: igen. Nemcsak hasonló tanulási algoritmusokat futtatnak, hanem gyakran szó szerint hasonló belső "reprezentációkat" (a beérkező adat tömörített, belső leképezéseit) is kialakítanak.
 
-Miért fontos ez a tudatosság kérdése szempontjából? Az esszé fő gondolatmenete az, hogy ha az MI valamilyen formában tudatos lehet, az azért képzelhető el, mert nem pusztán utánozza az agyat, hanem ténylegesen ugyanolyan jellegű számítást végez. Ez a szakasz rakja le ehhez az empirikus alapot: bizonyítékokat sorol arról, hogy a biológiai és a mesterséges hálózatok a felszín alatt egy tőről fakadnak.
+Miért fontos ez a tudatosság kérdése szempontjából? Az esszé fő gondolatmenete az, hogy ha az AI valamilyen formában tudatos lehet, az azért képzelhető el, mert nem pusztán utánozza az agyat, hanem ténylegesen ugyanolyan jellegű számítást végez. Ez a szakasz rakja le ehhez az empirikus alapot: bizonyítékokat sorol arról, hogy a biológiai és a mesterséges hálózatok a felszín alatt egy tőről fakadnak.
 
 A szerző több érvet és bizonyítéktípust vonultat fel:
 
 - A számítási idegtudomány (az agyat számítási modellekkel vizsgáló tudományág) az elmúlt években épp a mélytanulás áttörései nyomán robbant fel. Tanulmányok sora erősíti meg, hogy az agy is "mélymegerősítéses tanulást" végez (jutalom alapján, próbálgatással finomítja a viselkedést), és sokszor ugyanazokat a belső mintázatokat tanulja meg, mint egy mesterséges hálózat.
-- Épp ezért működnek egyáltalán az agy-számítógép interfészek (agyba ültetett vagy agyat leolvasó eszközök), és ezért elég akár hiányos, zajos agyi adat is ahhoz, hogy egy MI-modell rekonstruálja, mit lát vagy mire gondol valaki.
+- Épp ezért működnek egyáltalán az agy-számítógép interfészek (agyba ültetett vagy agyat leolvasó eszközök), és ezért elég akár hiányos, zajos agyi adat is ahhoz, hogy egy AI-modell rekonstruálja, mit lát vagy mire gondol valaki.
 
 A szakasz második fele elmagyaráz egy kulcsfogalmat, az "univerzalitást". Ez az a megfigyelés, hogy különböző felépítésű hálózatok, különböző adatokon, különböző módszerekkel tanítva meglepően hasonló reprezentációkat alakítanak ki. A klasszikus példa a látás: a hálózatok egyszerű jegyekből (élek, formák) indulnak, és egyre elvontabb fogalmak felé építkeznek. Pontosan ilyen réteges felépítés figyelhető meg az emberi látórendszerben is.
 
