@@ -1,0 +1,112 @@
+# Worked micro-example of SCHEMA.md v0 — section 01 only.
+# This is a fragment: the level-0 thesis and cross-section edges arrive with
+# the full mapping (validation plan step 2), so R1/R6 do not apply here yet.
+
+text:
+  title: "Time to Take AI Consciousness Seriously"
+  source: "https://www.secondbest.ca/p/time-to-take-ai-consciousness-seriously"
+  sections: ["01"]
+
+nodes:
+  - id: s01-key
+    level: 1
+    kind: claim
+    section: "01"
+    label: >-
+      The brain is a physical machine whose competence is mostly produced by
+      general learning algorithms, not by evolutionarily hardwired functions.
+    anchors:
+      - section: "01"
+        quote: "the brain is a machine that runs an algorithm"
+      - section: "01"
+        quote: "a minority of what the brain does is hardwired by evolution, with the rest dedicated to general learning algorithms"
+    interpolated: false
+
+  - id: s01-naturalism
+    level: 2
+    kind: claim
+    section: "01"
+    label: >-
+      The brain and its components operate entirely within the laws of physics
+      and chemistry.
+    anchors:
+      - section: "01"
+        quote: "the brain and its components are part of the natural universe, operating in a way compatible with the laws of physics and chemistry"
+    interpolated: false
+
+  - id: s01-learning-share
+    level: 2
+    kind: claim
+    section: "01"
+    label: >-
+      On Byrnes's reading of the neuroscience, over 90% of the brain by volume
+      exists to run learning-from-scratch algorithms, initialized like an
+      untrained neural network.
+    anchors:
+      - section: "01"
+        quote: "much of the brain (>90% by volume) exists solely to run learning-from-scratch algorithms"
+    interpolated: false
+
+  - id: s01-coupling
+    level: 2
+    kind: qualification
+    section: "01"
+    label: >-
+      Learning-from-scratch does not mean blank slate: genetic hardcoding sets
+      the algorithms, architectures and hyperparameters that guide learning,
+      and some brainstem subsystems work at birth.
+    anchors:
+      - section: "01"
+        quote: "Nature and nurture are instead tightly coupled"
+    interpolated: false
+
+  - id: s01-genome
+    level: 2
+    kind: ground
+    section: "01"
+    label: >-
+      The human genome has about 3 billion base pairs, while an adult brain has
+      about 100 trillion synapses.
+    anchors:
+      - section: "01"
+        quote: "the human genome has only 3 billion base pairs relative to the 100 trillion synapses of an adult human brain"
+    interpolated: false
+
+  - id: s01-debate
+    level: 2
+    kind: claim
+    section: "01"
+    label: >-
+      The connectionist-vs-symbolist split is a false opposition: the brain
+      likely does both statistical and symbolic processing, and neural networks
+      and Turing machines can approximate each other.
+    anchors:
+      - section: "01"
+        quote: "But the two are not in opposition."
+    interpolated: false
+
+  # An unstated warrant, made explicit — the Toulmin case the `interpolated`
+  # flag exists for: the genome/synapse ground only supports the
+  # learning-share claim via a description-length argument the text never
+  # states.
+  - id: s01-warrant-description-length
+    level: 2
+    kind: warrant
+    section: "01"
+    label: >-
+      Structure whose description exceeds what the genome can encode must come
+      from somewhere other than the genome - that is, from learning.
+    anchors: []
+    interpolated: true
+
+# Early R3 lesson from this very example: the section yields five *stated*
+# sub-nodes plus one interpolated warrant (six total). Open question fed back
+# to SCHEMA.md: R3's 3-5 range should probably count stated nodes only.
+
+edges:
+  - {from: s01-naturalism, to: s01-key, type: supports}
+  - {from: s01-learning-share, to: s01-key, type: supports}
+  - {from: s01-genome, to: s01-warrant-description-length, type: supports}
+  - {from: s01-warrant-description-length, to: s01-learning-share, type: supports}
+  - {from: s01-coupling, to: s01-learning-share, type: qualifies}
+  - {from: s01-debate, to: s01-key, type: elaborates}

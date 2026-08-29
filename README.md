@@ -43,6 +43,11 @@ sections/
 Section `00-introduction` is the text before the first H2. Section
 `07-so-are-ais-conscious-or-not` also contains the article's footnotes.
 
+There is also `skeleton/` — an experimental, article-independent schema for
+representing a text's reasoning structure (**[skeleton/SCHEMA.md](skeleton/SCHEMA.md)**),
+with this essay as its first validation corpus. It is not consumed by the
+HTML build.
+
 ## Link statuses (links.json)
 
 - `pending`   — not yet processed
