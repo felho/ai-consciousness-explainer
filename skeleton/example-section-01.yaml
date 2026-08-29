@@ -99,9 +99,12 @@ nodes:
     anchors: []
     interpolated: true
 
-# Early R3 lesson from this very example: the section yields five *stated*
-# sub-nodes plus one interpolated warrant (six total). Open question fed back
-# to SCHEMA.md: R3's 3-5 range should probably count stated nodes only.
+# First D1 data point, from this very example: six nodes the reader must
+# hold (five stated + one interpolated warrant). Grain re-checked and
+# faithful, so per the D1 protocol the finding is about the text — mild
+# chunk overload plus one unstated warrant (D2) — which matches the felt
+# reading experience that motivated this project. A diagnostic, not a rule
+# violation; see SCHEMA.md "Diagnostics".
 
 edges:
   - {from: s01-naturalism, to: s01-key, type: supports}
