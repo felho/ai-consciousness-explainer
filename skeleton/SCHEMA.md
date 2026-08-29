@@ -52,6 +52,9 @@ nodes:
     anchors:                    # verbatim substrings of that section's section.md
       - section: "01"
         quote: "exact text copied from the source"
+      - section: "01"
+        footnote: 2             # optional: the quote lives in footnote [2]
+        quote: "exact text copied from that footnote"
     interpolated: false         # true = needed by the argument, absent from the text
 
 edges:
@@ -129,6 +132,16 @@ compress it away to satisfy a range.
 - D2 · **Explicitness**: the count of `interpolated: true` nodes — how
   much of the argument the reader must supply themselves. A separate
   signal from D1: D1 measures density, D2 measures what is left unsaid.
+- D3 · **Buried load**: a node whose *every* anchor carries a `footnote`
+  field exists only below the line. This status is derived from the
+  anchors at read time, never stored on the node — anything computable
+  from the data is computed, not duplicated. The signal: if a main chain
+  (a `level: 1` node's R6 path to the thesis) passes through a
+  footnote-only node, the author buried load-bearing content in a
+  footnote — the main text is under-argued there. Footnote-only nodes
+  also serve consumers directly: advanced-deck material for cards, depth
+  probes for the tutor. The diagnostic family so far: how dense (D1),
+  how unsaid (D2), how buried (D3).
 
 ## R2 stress protocol (pre-registered 2026-08-29)
 
@@ -205,8 +218,12 @@ their sub-nodes support the relation rather than either half.
   sixth type. Open remainder: which further scheme values the mapping
   forces (authority is the likely next — Byrnes's reading of the
   neuroscience).
-- Do footnotes need to be anchorable as first-class sources, or do they
-  stay inside their section's anchor space?
+- ~~Do footnotes need to be anchorable as first-class sources?~~
+  Answered 2026-08-30: anchors take an optional `footnote: <n>` field;
+  "footnote-only" is derived from anchors (never stored), and D3 reports
+  main chains that pass through footnote-only nodes. Section 01's
+  footnote [2] (the modularity objection + its biomimetic-convnet
+  answer) is the motivating case.
 - Where does the *Hungarian explanation layer* attach, if anywhere — the
   skeleton is of the original text, but the explainer page may want to
   render labels bilingually.
