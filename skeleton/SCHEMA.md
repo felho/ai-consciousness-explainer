@@ -76,6 +76,25 @@ edges:
 `qualifies` (limits scope) · `rebuts` (opposes) · `presupposes` (needs the
 target already established — the cross-section dependency workhorse).
 
+**Optional `scheme` attribute.** An edge may name the *inference pattern*
+it runs on — a refinement within a type, never a new type. The role
+vocabulary above is closed (a sixth type would change the contract every
+consumer reads); the scheme vocabulary is the open axis (Walton's
+catalog), and a consumer that ignores it still reads a complete graph.
+New values enter one at a time, when the mapping actually hits them
+(divergence-log rule). Current values:
+
+- `analogy` (on `supports`): the support runs on "similar mechanism →
+  likely similar property" — this essay's load-bearing move (brain ↔
+  ANN). Standard critical questions attach for the tutor and metric
+  consumers: in what respects similar? are those respects relevant to
+  the conclusion? are there relevant differences?
+
+```yaml
+edges:
+  - {from: s02-key, to: s07-key, type: supports, scheme: analogy}
+```
+
 ## Well-formedness rules (v0, all machine-checkable)
 
 - R1 · Exactly one `level: 0` node (the thesis).
@@ -151,7 +170,10 @@ their sub-nodes support the relation rather than either half.
   into typed edges**: AIF reifies schemes because it feeds inference
   engines; this schema feeds a human's reading and recall, where a
   first-class scheme node is ceremony. Revisit only if edge types prove
-  too coarse in practice.
+  too coarse in practice. *Revisit fired (2026-08-30):* the analogy
+  question proved them too coarse for exactly one case, and schemes were
+  partially restored — as an optional `scheme` edge attribute, not a
+  node. Roles stay closed; the scheme vocabulary is the open axis.
 - **Toulmin** (claim–ground–warrant–backing–qualifier–rebuttal): the node
   `kind` vocabulary, minus `backing` (fold into `ground` at this grain).
   Toulmin's known lesson — warrants are usually unstated — is what the
@@ -178,8 +200,11 @@ their sub-nodes support the relation rather than either half.
   irreducible claims? Detection is now pre-registered (see the R2 stress
   protocol); the open part is whether it fires on sections 02–07 —
   section 06 (pain, reward, valence) is the prime suspect.
-- Are five edge types enough, or does the essay force distinctions
-  (e.g. analogy — sections argue brain↔ANN parallels heavily)?
+- ~~Are five edge types enough?~~ Answered 2026-08-30: yes for *roles* —
+  analogy entered as the first `scheme` value on `supports`, not as a
+  sixth type. Open remainder: which further scheme values the mapping
+  forces (authority is the likely next — Byrnes's reading of the
+  neuroscience).
 - Do footnotes need to be anchorable as first-class sources, or do they
   stay inside their section's anchor space?
 - Where does the *Hungarian explanation layer* attach, if anywhere — the
