@@ -378,6 +378,10 @@ aside.exp li{{margin:0 0 6px}}
 #tip p{{margin:0 0 8px}}
 #tip .card-note{{color:var(--note);font-style:italic}}
 #tip .card-src{{display:inline-block;margin-top:6px;color:var(--accent);text-decoration:none;font-size:13.5px}}
+#tip .tip-close{{position:sticky;top:0;float:right;margin:0 0 6px 12px;
+  border:1px solid var(--card-rule);background:var(--card-bg);color:var(--muted);
+  font-size:18px;line-height:1;padding:4px 9px;cursor:pointer;border-radius:8px}}
+#tip .tip-close:hover{{color:var(--fg)}}
 .themebtn{{position:fixed;top:14px;right:14px;z-index:60;border:1px solid var(--rule);
   background:var(--card-bg);color:var(--fg);border-radius:20px;padding:6px 12px;font-size:13px;cursor:pointer;
   font-family:-apple-system,system-ui,sans-serif}}
@@ -438,13 +442,19 @@ const IMGS = {imgs};
     const id = el.getAttribute('data-card');
     if (!CARDS[id]) return;
     clearTimeout(hideTimer);
-    if (curr !== el){{ tip.innerHTML = CARDS[id]; curr = el; }}
+    if (curr !== el){{
+      tip.innerHTML = '<button class="tip-close" aria-label="Bezárás" title="Bezárás">×</button>' + CARDS[id];
+      curr = el;
+    }}
     place(el);
+  }}
+  function hide(){{
+    tip.classList.remove('show'); curr = null; overTip = false;
   }}
   function scheduleHide(){{
     clearTimeout(hideTimer);
     hideTimer = setTimeout(function(){{
-      if (!overTip){{ tip.classList.remove('show'); curr = null; }}
+      if (!overTip) hide();
     }}, 180);
   }}
   document.querySelectorAll('a.src[data-card]').forEach(function(el){{
@@ -455,6 +465,19 @@ const IMGS = {imgs};
   }});
   tip.addEventListener('mouseenter', function(){{ overTip = true; clearTimeout(hideTimer); }});
   tip.addEventListener('mouseleave', function(){{ overTip = false; scheduleHide(); }});
+  tip.addEventListener('click', function(e){{
+    if (e.target.closest('.tip-close')) hide();
+  }});
+  // Touch devices have no mouseleave: dismiss on any tap/click outside the card
+  // (taps on another source link fall through to show() instead).
+  function onOutside(e){{
+    if (!tip.classList.contains('show')) return;
+    if (tip.contains(e.target)) return;
+    if (e.target.closest && e.target.closest('a.src[data-card]')) return;
+    hide();
+  }}
+  document.addEventListener('pointerdown', onOutside, true);
+  document.addEventListener('click', onOutside, true);
   // theme toggle
   const btn = document.getElementById('themebtn');
   btn.addEventListener('click', function(){{
