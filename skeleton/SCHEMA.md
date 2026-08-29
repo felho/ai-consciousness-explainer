@@ -111,6 +111,38 @@ compress it away to satisfy a range.
   much of the argument the reader must supply themselves. A separate
   signal from D1: D1 measures density, D2 measures what is left unsaid.
 
+## R2 stress protocol (pre-registered 2026-08-29)
+
+R2 (one key sentence per section) is expected to come under stress during
+the mapping. How we will notice — decided in advance, so the failure is
+detected rather than argued. A label is suspected of stapling two claims
+together when:
+
+1. **Split trigger** (cheap): cut the label at its conjunction. Both
+   halves stand alone as assertions the section actually defends. (A half
+   that merely qualifies or colors the other clears the label.)
+2. **Edge test** (structural, machine-checkable): remove the section's
+   `level: 1` node from the graph. If its `level: 2` nodes fall into two
+   near-disjoint components, each bearing on only one half of the label,
+   that is two chunks wearing one sentence.
+3. **Card test** (functional tie-breaker): would one honest review card
+   cover the label — one question with one answer — or must it be two?
+
+Verdict by majority (2 of 3). On "two": **plan B** — the map splits the
+section into two *virtual chunks*, each with its own key sentence. R2
+keeps holding, per chunk: the section boundary is the author's
+typography, the chunk boundary is the reader's memory. The split is
+recorded as a quality finding about the text (kin to D1).
+
+Calibration case: section 01's own label trips test 1 and arguably test
+2 (naturalism bears on the "physical machine" half, the genome argument
+on the "learning" half), but passes test 3 — the motto integrates the
+halves into one stance, and later sections use them together. Verdict:
+one claim, 2:1 — which is why the protocol takes a majority, not any
+single test. Relational and analogy claims ("A is like B in respect C")
+contain two topics but are one claim; the edge test handles them, since
+their sub-nodes support the relation rather than either half.
+
 ## Prior art, and where this deliberately diverges
 
 - **AIF** (Argument Interchange Format): arguments as typed directed
@@ -143,7 +175,9 @@ compress it away to satisfy a range.
 ## Open questions for the validation run
 
 - Is one key sentence per section honest, or do some sections carry two
-  irreducible claims (R2 stress test)?
+  irreducible claims? Detection is now pre-registered (see the R2 stress
+  protocol); the open part is whether it fires on sections 02–07 —
+  section 06 (pain, reward, valence) is the prime suspect.
 - Are five edge types enough, or does the essay force distinctions
   (e.g. analogy — sections argue brain↔ANN parallels heavily)?
 - Do footnotes need to be anchorable as first-class sources, or do they
