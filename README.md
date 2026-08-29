@@ -8,6 +8,9 @@ Goal: break the (dense) essay into digestible pieces so a layman reader can
 understand each section and each cited source. The final HTML page is assembled
 from these pieces by `bin/build_html.py` into `build/index.html`.
 
+**Read it online:** <https://felho.github.io/ai-consciousness-explainer/build/index.html>
+(GitHub Pages, served from `build/index.html` on `main` — republished on every push.)
+
 ## Language convention
 
 - Original article text (`section.md`, `source/`): English (as published).
