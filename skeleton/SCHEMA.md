@@ -188,6 +188,33 @@ compress it away to satisfy a range.
   probes for the tutor. The diagnostic family so far: how dense (D1),
   how unsaid (D2), how buried (D3).
 
+## D1 calibration plan (pre-registered 2026-08-30)
+
+The 3–5 band is a hypothesis imported from working-memory research
+(Cowan's 4±1), not a validated threshold for this diagnostic. The
+independent measure it should predict exists: the owner's felt
+reconstruction difficulty — the very experience that motivated the
+project. Procedure, after the full mapping:
+
+1. **Blind first**: before seeing any counts, the owner rates each of
+   the 8 sections from memory on two axes — *reconstruction difficulty*
+   (easy / medium / hard) and *prior familiarity* (he partly knows the
+   text, especially the early sections, so "easy" may mean "familiar",
+   not "well-structured"; the second axis lets the comparison discount
+   that).
+2. Only then are the ratings put beside the D1 counts (nodes the reader
+   must hold, bridges included).
+3. Co-movement (after discounting familiarity) validates the band;
+   divergence is a finding with 8 data points to reason from.
+
+The order is the instrument: ratings taken after seeing counts would
+anchor to them, and the test would confirm itself. Self-restraint,
+stated in advance: **one corpus does not tune the band.** A divergence
+is recorded, but the 3–5 threshold moves only if the generalization
+gate's second, different-genre text shows the same — a threshold tuned
+to one essay would be exactly the overfitting the schema-first ordering
+was chosen to avoid.
+
 ## R2 stress protocol (pre-registered 2026-08-29)
 
 R2 (one key sentence per section) is expected to come under stress during
