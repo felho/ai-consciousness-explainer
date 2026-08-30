@@ -266,6 +266,31 @@ pedagogical product, not a skeleton source — mapping from it would chart
 the explainer's distortions instead of the text. A good skeleton may
 someday *generate* explanations; never the reverse.
 
+## Thesis selection (decided 2026-08-30)
+
+R1 stands: exactly one `level: 0` node. When a text carries both a
+descriptive thesis ("AI consciousness is mechanistically plausible")
+and a normative one ("it is time to take it seriously"), the thesis is
+the **normative** claim — the one the text exists to advance, usually
+the title's claim. The descriptive backbone becomes the graph's
+highest-ranking supporting claim, and the is→ought step is an ordinary
+`supports` edge carrying its bridge (the value premise: "if plausible,
+and the stakes are moral, attention is owed") at whichever explicitness
+level the text earns. This is the persuasive essay's base shape, not
+this essay's quirk — the rule generalizes.
+
+Two consequences:
+
+- **Title-promise signal**: if the mapping shows the descriptive
+  backbone never actually flowing into the normative thesis — the text
+  builds plausibility but never argues the "so take it seriously"
+  step — the graph shows a thesis with no incoming main chain. The
+  title promises more than the text argues: a quality finding.
+- **Doubt protocol**: if it becomes unclear whether the thesis is one
+  claim or two, the R2 stress protocol applies to the thesis as well —
+  the card test above all: does one honest review card cover the text's
+  main claim?
+
 ## Prior art, and where this deliberately diverges
 
 - **AIF** (Argument Interchange Format): arguments as typed directed
