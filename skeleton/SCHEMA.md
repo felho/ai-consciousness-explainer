@@ -98,6 +98,49 @@ edges:
   - {from: s02-key, to: s07-key, type: supports, scheme: analogy}
 ```
 
+## The bridge, at three explicitness levels (decided 2026-08-30)
+
+Every `supports` edge runs on a bridge — a licence for the jump from
+evidence to claim (Toulmin's warrant). A Walton scheme is a *generalized*
+warrant, and a warrant is a scheme instantiated: one axis, two
+resolutions, not two kinds of thing. The schema shows a bridge at one of
+three levels:
+
+1. **Implicit** — nothing recorded. For trivial bridges ("the study
+   showed X" → "X is true").
+2. **Named** — `scheme` on the edge. The jump's *pattern* matters (its
+   attack surface, its critical questions), but its content adds nothing
+   beyond the pattern.
+3. **Spelled out** — a full node. If the text states the bridge: an
+   ordinary anchored node. If it doesn't: an `interpolated` node with
+   `kind: warrant`, standing in a chain (evidence → warrant → claim).
+
+The chain's reading is carried by the kind, not by fragile convention:
+an edge *into* a `kind: warrant` node means "input to the bridge", never
+"argues for the bridge" — any consumer can query this, and a renderer
+may draw a single-use interpolated warrant hanging on its arrow, exactly
+as Toulmin diagrams do. That picture is a **derived view**, never the
+stored shape.
+
+Why the stored shape stays node-uniform (an edge-resident `bridge`
+sentence attribute was considered, adopted for an afternoon, and
+rejected):
+
+- **No migration.** A bridge later found to licence a second jump just
+  gains a second edge; an edge-resident sentence would have to be torn
+  off its edge and rebuilt as a node mid-mapping.
+- **One object space.** Cards, tutor and the D-counters look for
+  thoughts in exactly one place: nodes.
+- **The deciding asymmetry:** everything the edge-resident model offers
+  is derivable from the node model (the Toulmin drawing by pattern-match
+  on the chain; statedness from anchors + `interpolated`) — while the
+  node model's uniformity is not derivable from a split model. What can
+  be derived is a view; what cannot be derived is the data model.
+
+Consequence for D2: it counts spelled-out bridges only (level 3).
+Bridges left implicit or merely named are counted nowhere, so **D2 is a
+floor** on the text's unstatedness, not an inventory.
+
 ## Well-formedness rules (v0, all machine-checkable)
 
 - R1 · Exactly one `level: 0` node (the thesis).
@@ -132,6 +175,8 @@ compress it away to satisfy a range.
 - D2 · **Explicitness**: the count of `interpolated: true` nodes — how
   much of the argument the reader must supply themselves. A separate
   signal from D1: D1 measures density, D2 measures what is left unsaid.
+  A floor, not an inventory: bridges left implicit or merely
+  scheme-named are counted nowhere (see the bridge section).
 - D3 · **Buried load**: a node whose *every* anchor carries a `footnote`
   field exists only below the line. This status is derived from the
   anchors at read time, never stored on the node — anything computable
@@ -209,7 +254,9 @@ someday *generate* explanations; never the reverse.
 - **Toulmin** (claim–ground–warrant–backing–qualifier–rebuttal): the node
   `kind` vocabulary, minus `backing` (fold into `ground` at this grain).
   Toulmin's known lesson — warrants are usually unstated — is what the
-  `interpolated` flag operationalizes.
+  `interpolated` flag operationalizes. Toulmin hangs the warrant on the
+  arrow; here that is the *rendered* view of a single-use warrant node
+  (see the bridge section), while the stored shape stays node-uniform.
 - **Mnemonic medium** (Matuschak/Nielsen): not used in the schema itself;
   labels + anchors are designed to be sufficient input for prompt
   generation later, which is the point of R4 and constraint 4.
