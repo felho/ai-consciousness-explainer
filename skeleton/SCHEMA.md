@@ -175,6 +175,25 @@ single test. Relational and analogy claims ("A is like B in respect C")
 contain two topics but are one claim; the edge test handles them, since
 their sub-nodes support the relation rather than either half.
 
+## Localization overlay (decided 2026-08-30)
+
+Three different things hide in "bilingual": the **graph** is
+language-independent, **anchors** are language-bound verbatim quotes, and
+**labels** are crafted, translatable sentences. So: the skeleton core
+stays in the original text's language — single source of truth, anchors
+only into the original — and a translation is a thin optional overlay
+file (`labels.hu.yaml`: node id → translated label), nothing else. No
+translated anchors: a translation tweak would silently break them, and
+R4 stays checkable against one file. If a Hungarian-view consumer ever
+needs in-text highlighting, `section.hu.md`'s 1:1 structural mirror
+allows position-based mapping — built only when a consumer actually
+needs it.
+
+Boundary: the Hungarian explanation layer (`explanation.md`) is a
+pedagogical product, not a skeleton source — mapping from it would chart
+the explainer's distortions instead of the text. A good skeleton may
+someday *generate* explanations; never the reverse.
+
 ## Prior art, and where this deliberately diverges
 
 - **AIF** (Argument Interchange Format): arguments as typed directed
@@ -224,6 +243,6 @@ their sub-nodes support the relation rather than either half.
   main chains that pass through footnote-only nodes. Section 01's
   footnote [2] (the modularity objection + its biomimetic-convnet
   answer) is the motivating case.
-- Where does the *Hungarian explanation layer* attach, if anywhere — the
-  skeleton is of the original text, but the explainer page may want to
-  render labels bilingually.
+- ~~Where does the Hungarian layer attach?~~ Answered 2026-08-30: thin
+  label overlay, no translated anchors, explanation.md is never a
+  source — see "Localization overlay" above.
