@@ -320,7 +320,8 @@ def main():
             "skel_overlay":
                 '<div id="skel-clear" hidden>'
                 '<button type="button" class="skel-float-btn" id="skel-clear-btn">'
-                '✕ kiemelés törlése</button></div>'
+                '✕ kiemelés törlése</button>'
+                '<span class="skel-qcount" id="skel-qcount" hidden></span></div>'
                 '<div id="skel-back" hidden>'
                 '<button type="button" class="skel-float-btn" id="skel-back-btn">'
                 '← vissza</button>'

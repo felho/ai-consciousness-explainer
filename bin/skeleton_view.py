@@ -85,8 +85,15 @@ THESIS_NOTE = ("A leíró gerinctől egyetlen lépés vezet a normatív tézisig
                "és ez a lépés nem bizonyítás.")
 
 # The only strings that follow the label language rather than the page chrome:
-# they sit inside the diagram, next to labels, and a Hungarian caption over an
-# English label reads as a bug.
+# they sit inside the diagram or on a card next to labels, and a Hungarian
+# caption over an English label reads as a bug. `%1`, `%2`, ... are positional
+# arguments, substituted by _fmt() here and by T() in the page JS.
+#
+# Number agreement is the reason a few English strings are phrased loosely:
+# every count that reaches a plural noun is provably >= 2 (the smallest chunk
+# carries 4 claims; a multi-quote gloss only fires above 1), but the
+# interpolation count is 1 in every chunk that has any, so the English
+# composition line says "added" rather than a noun that would need a plural.
 UI_STRINGS = {
     "hu": {
         "thesis-cap": "TÉZIS",
@@ -94,6 +101,20 @@ UI_STRINGS = {
         "post": "mit adott hozzá",
         "overview": "a gondolatmenet váza",
         "graphtag": "AZ ÉRVELÉS ÁBRÁJA",
+        "comp": "%1 állítás · %2 szint",
+        "comp-add": "%1 állítás · %2 szint · ◇ %3 kiegészítés",
+        "n-claims": "%1 állítás",
+        "builds-on": "mire épül:",
+        "built-on-by": "építenek rá:",
+        "to-start": "→ elejére",
+        "details": "⋮ részletei",
+        "quote-n": "idézet %1/%2",
+        "mg-key": "a fejezet kulcsállítása",
+        "mg-anchored": "állítás — a szöveg kimondja",
+        "mg-anchored-n": "állítás — a szöveg kimondja (%1 idézet)",
+        "mg-fn": "állítás — csak lábjegyzetben él",
+        "mg-interp": "kiegészítés — a térkép tette hozzá, a szöveg ezt nem mondja ki",
+        "bp-also": "továbbá alátámasztja: %1",
     },
     "en": {
         "thesis-cap": "THESIS",
@@ -101,11 +122,32 @@ UI_STRINGS = {
         "post": "what it added",
         "overview": "the shape of the argument",
         "graphtag": "THE ARGUMENT, DRAWN",
+        "comp": "%1 claims · %2 levels",
+        "comp-add": "%1 claims · %2 levels · ◇ %3 added",
+        "n-claims": "%1 claims",
+        "builds-on": "builds on:",
+        "built-on-by": "built on by:",
+        "to-start": "→ to its start",
+        "details": "⋮ details",
+        "quote-n": "quote %1/%2",
+        "mg-key": "the chapter's key claim",
+        "mg-anchored": "claim — stated by the text",
+        "mg-anchored-n": "claim — stated by the text (%1 quotes)",
+        "mg-fn": "claim — lives only in a footnote",
+        "mg-interp": "addition — supplied by the map, the text never states it",
+        "bp-also": "also supports: %1",
     },
 }
 
+# The glyph each marker gloss is about, keyed by that gloss. The gloss card's
+# header is the SYMBOL, so the reader can match what they tapped against what
+# the sentence explains.
+MARK_GLYPHS = {"mg-key": "⬤", "mg-anchored": "●", "mg-anchored-n": "●",
+               "mg-fn": "●", "mg-interp": "◇"}
+
 _TAG_RE = re.compile(r"<[^>]*>")
 _WS_RE = re.compile(r"\s+")
+_ARG_RE = re.compile(r"%(\d)")
 
 
 class SkeletonError(Exception):
@@ -131,6 +173,20 @@ def shorten(text, limit=118):
         return text
     cut = text[:limit].rsplit(" ", 1)[0]
     return cut.rstrip(" ,;:.—-") + "…"
+
+
+def _fmt(template, args):
+    """Substitute %1, %2, ... Mirrored by T() in the page JS; keep the two in
+    step, because the same string is rendered here at build time and again in
+    the browser after a language switch."""
+    return _ARG_RE.sub(lambda m: str(args[int(m.group(1)) - 1]), template)
+
+
+def _i18n_span(cls, key, args=()):
+    """A span whose text follows the EN|HU label pill rather than page chrome."""
+    attr = (' data-i18n-args="%s"' % _esc("|".join(str(a) for a in args))) if args else ""
+    return ('<span class="%s" data-i18n="%s"%s>%s</span>'
+            % (cls, key, attr, _esc(_fmt(UI_STRINGS["hu"][key], args))))
 
 
 def text_nodes(fragment):
@@ -537,19 +593,25 @@ class SkeletonView(object):
             # bypass: the second parent of an out-degree-2 node, drawn as a real
             # edge in its own lane rather than as a chip of prose.
             bypass_role = [None] * len(rows)
+            bypass_idx = [None] * len(rows)   # which bypass the row's lane part belongs to
+            bypass_dst = [None] * len(rows)   # what the bypass additionally supports
             bypasses = []
             for i, row in enumerate(rows):
                 for dst, etype, scheme in row["extras"]:
                     j = index_of[dst]
                     bypasses.append({"src": i, "dst": j, "etype": etype,
                                      "scheme": scheme, "down": j > i})
-            for bp in bypasses:
+            for k, bp in enumerate(bypasses):
                 lo, hi = min(bp["src"], bp["dst"]), max(bp["src"], bp["dst"])
                 bypass_role[bp["src"]] = ("start-down" if bp["down"] else "start-up")
                 bypass_role[bp["dst"]] = ("end-down" if bp["down"] else "end-up")
+                for end in (bp["src"], bp["dst"]):
+                    bypass_idx[end] = k
+                    bypass_dst[end] = rows[bp["dst"]]["id"]
                 for m in range(lo + 1, hi):
                     if bypass_role[m] is None:
                         bypass_role[m] = "mid"
+                        bypass_idx[m] = k
 
             # One parent->child run has to read as ONE line, and it is drawn by
             # three different rows, so each row states which part of its lane it
@@ -562,6 +624,15 @@ class SkeletonView(object):
             #     without it the run stopped short of the last child's elbow.
             # Rows abut exactly (no margins), so the three parts join seamlessly
             # whatever a multi-line label does to the row heights.
+            #
+            # A child that has a LATER sibling used to own one "full" segment in
+            # the parent's column, which is two runs glued together: the top half
+            # closes the parent->this-child run, the bottom half carries the
+            # parent->next-sibling run onwards. One element cannot belong to one
+            # chain and not the other, so a highlighted chain would either stop
+            # short or bleed into a sibling's branch. It is therefore emitted as
+            # the same two parts every other row already uses - "up" plus "down",
+            # which abut at the marker line and draw exactly what "full" drew.
             cont = {}
             meta = []
             for i, row in enumerate(rows):
@@ -570,14 +641,16 @@ class SkeletonView(object):
                 verticals = [(LANE_X0 + LANE_PITCH * (a - 1), "full")
                              for a in range(1, d) if cont.get(a)]
                 if d:
-                    verticals.append((LANE_X0 + LANE_PITCH * (d - 1),
-                                      "full" if cont[d] else "up"))
+                    verticals.append((LANE_X0 + LANE_PITCH * (d - 1), "up"))
+                    if cont[d]:
+                        verticals.append((LANE_X0 + LANE_PITCH * (d - 1), "down"))
                 if kids.get(i):
                     verticals.append((LANE_X0 + LANE_PITCH * d, "down"))
                 meta.append({
                     "row": row, "i": i, "depth": d, "parent": parent[i],
                     "last": last[i], "verticals": verticals,
-                    "bypass": bypass_role[i],
+                    "bypass": bypass_role[i], "bp": bypass_idx[i],
+                    "bp_dst": bypass_dst[i],
                     "x": LANE_X0 + LANE_PITCH * d,
                 })
             self.lanes[chunk] = {
@@ -847,11 +920,13 @@ class SkeletonView(object):
     # ======================================================================
 
     def _composition(self, chunk):
-        lane = self.lanes[chunk]
-        parts = ["%d állítás" % self.d1[chunk], "%d szint" % (lane["maxdepth"] + 1)]
+        """The card's one-line composition. Card chrome, so it follows the label
+        pill rather than the (always Hungarian) page chrome."""
+        args = [self.d1[chunk], self.lanes[chunk]["maxdepth"] + 1]
+        key = "comp"
         if self.interp_count[chunk]:
-            parts.append("◇ %d kiegészítés" % self.interp_count[chunk])
-        return " · ".join(parts)
+            key, args = "comp-add", args + [self.interp_count[chunk]]
+        return _i18n_span("skel-card-comp", key, args)
 
     def _thumb_svg(self, chunk):
         """A real thumbnail: the same lane model at 1/4 scale, not a decoration."""
@@ -918,15 +993,19 @@ class SkeletonView(object):
                 out.append('<path class="sk-term sk-term-%s" d="M%s 3 L%s 8 L%s 8 Z"/>'
                            % (etype, _n(lane_x), _n(lane_x - 2.5), _n(lane_x + 2.5)))
 
-        role = m["bypass"]
+        # The bypass keeps its own ink vocabulary (sk-*-bypass) so it can be held
+        # faint by default and lit as one whole edge - across all three of the
+        # rows that draw parts of it - when an endpoint row goes live.
+        role, bp = m["bypass"], m["bp"]
         if role and role.startswith("start"):
-            out.append('<path class="sk-ed sk-ed-bypass" d="M%s %d L%d %d"/>'
-                       % (_n(x), MARK_Y, BYPASS_X, MARK_Y))
+            out.append('<path class="sk-ed sk-ed-bypass" data-bp="%d" d="M%s %d L%d %d"/>'
+                       % (bp, _n(x), MARK_Y, BYPASS_X, MARK_Y))
         elif role and role.startswith("end"):
-            out.append('<path class="sk-ed sk-ed-bypass" d="M%d %d L%s %d"/>'
-                       % (BYPASS_X, MARK_Y, _n(x - 8), MARK_Y))
-            out.append('<path class="sk-term sk-term-supports" d="M%s %d L%s %s L%s %s Z"/>'
-                       % (_n(x - 7), MARK_Y, _n(x - 12), _n(MARK_Y - 2.5),
+            out.append('<path class="sk-ed sk-ed-bypass" data-bp="%d" d="M%d %d L%s %d"/>'
+                       % (bp, BYPASS_X, MARK_Y, _n(x - 8), MARK_Y))
+            out.append('<path class="sk-term sk-term-bypass" data-bp="%d" '
+                       'd="M%s %d L%s %s L%s %s Z"/>'
+                       % (bp, _n(x - 7), MARK_Y, _n(x - 12), _n(MARK_Y - 2.5),
                           _n(x - 12), _n(MARK_Y + 2.5)))
 
         if m["row"]["scheme"] and d:
@@ -962,6 +1041,24 @@ class SkeletonView(object):
                 'title="%s" aria-label="%s"%s>❝%s</button>'
                 % (_esc(nid), _esc(title), _esc(title), disabled, count))
 
+    def _mark_gloss(self, m):
+        """Which marker glyph this row draws, as a gloss key plus its arguments.
+
+        The four kinds are exactly the four branches of _head_svg()'s marker
+        block, so the gloss can never describe a glyph the row does not draw.
+        """
+        nid = m["row"]["id"]
+        if m["i"] == 0:
+            return "mg-key", []
+        if self.by_id[nid].get("interpolated") is True:
+            return "mg-interp", []
+        if self.footnote_only(nid):
+            return "mg-fn", []
+        count = len(self.anchor_index.get(nid, []))
+        if count > 1:
+            return "mg-anchored-n", [count]
+        return "mg-anchored", []
+
     def _lane_rows_html(self, chunk):
         lane = self.lanes[chunk]
         out = []
@@ -971,28 +1068,51 @@ class SkeletonView(object):
             classes = ["skel-lrow", "sk-e-" + (m["row"]["etype"] or "root")]
             if node.get("interpolated") is True:
                 classes.append("sk-interp")
+            # The kind travels in the class, and the column in the inline `left`
+            # the segment already needed; the page JS reads both back to light
+            # one chain's lane parts without a byte of extra markup.
             verticals = "".join(
                 '<i class="skel-lane%s" style="left:%dpx"></i>'
                 % ("" if kind == "full" else " sk-l-" + kind, x)
                 for x, kind in m["verticals"])
-            role = m["bypass"]
+            role, bp = m["bypass"], m["bp"]
+            bpx = ""
             if role:
                 cls = {"start-down": "sk-bp-down", "end-up": "sk-bp-down",
                        "start-up": "sk-bp-up", "end-down": "sk-bp-up",
                        "mid": "sk-bp-mid"}[role]
-                verticals += ('<i class="skel-lane %s" style="left:%dpx"></i>'
-                              % (cls, BYPASS_X))
+                verticals += ('<i class="skel-lane %s" data-bp="%d" style="left:%dpx"></i>'
+                              % (cls, bp, BYPASS_X))
+                if role != "mid":
+                    # A gloss target over the stub that leaves the marker, on
+                    # both endpoint rows: a dashed line into the far left gutter
+                    # says nothing on its own about what it feeds.
+                    bpx = ('<button type="button" class="skel-bpx skel-keep" '
+                           'data-skel-bp="%s" style="left:%dpx;width:%dpx" '
+                           'aria-label="%s"></button>'
+                           % (_esc(m["bp_dst"]), BYPASS_X - 11,
+                              max(24, m["x"] - BYPASS_X + 3),
+                              _esc(_fmt(UI_STRINGS["hu"]["bp-also"],
+                                        [shorten(self.label_hu[m["bp_dst"]], 74)]))))
+            gkey, gargs = self._mark_gloss(m)
             out.append(
                 '<div class="%s" data-row="%d" data-depth="%d" data-parent="%s" '
-                'data-node="%s">'
-                '<button type="button" class="skel-mark skel-keep" data-skel-node="%s" '
+                'data-node="%s"%s>'
+                '<button type="button" class="skel-mark skel-keep" data-skel-mg="%s"%s '
                 'style="left:%dpx" aria-label="%s"></button>'
-                '%s%s%s'
+                '%s%s%s%s'
                 '<span class="skel-llabel" data-skel-label="%s">%s</span>%s</div>'
                 % (" ".join(classes), m["i"], m["depth"],
-                   "" if m["parent"] is None else m["parent"], _esc(nid), _esc(nid),
-                   m["x"] - 13, _esc("%s · állítás" % chunk),
-                   self._scheme_hit(chunk, m), verticals, self._head_svg(chunk, m),
+                   "" if m["parent"] is None else m["parent"], _esc(nid),
+                   "" if (role in (None, "mid")) else ' data-bpend="%d"' % bp,
+                   _esc(gkey),
+                   (' data-i18n-args="%s"' % _esc("|".join(str(a) for a in gargs)))
+                   if gargs else "",
+                   m["x"] - 13,
+                   _esc("%s — %s" % (MARK_GLYPHS[gkey],
+                                     _fmt(UI_STRINGS["hu"][gkey], gargs))),
+                   self._scheme_hit(chunk, m), bpx, verticals,
+                   self._head_svg(chunk, m),
                    _esc(nid), _esc(self.label_hu[nid]), self._quote_btn(nid)))
         return "".join(out)
 
@@ -1027,9 +1147,11 @@ class SkeletonView(object):
             bits.append('<span class="skel-chip skel-add">kiegészítés — a szöveg '
                         'ezt nem mondja ki</span>')
         for dst, _etype, _scheme in row["extras"]:
+            gloss = _fmt(UI_STRINGS["hu"]["bp-also"],
+                         [shorten(self.label_hu[dst], 74)])
             bits.append('<button type="button" class="skel-also skel-keep" '
-                        'data-skel-node="%s" title="Második szülő" '
-                        'aria-label="Második szülő">↗</button>' % _esc(dst))
+                        'data-skel-bp="%s" title="%s" aria-label="%s">↗</button>'
+                        % (_esc(dst), _esc(gloss), _esc(gloss)))
         return '<li class="%s">%s' % (" ".join(classes), "".join(bits))
 
     def _tree_html(self, chunk):
@@ -1066,8 +1188,7 @@ class SkeletonView(object):
             'aria-expanded="false" aria-controls="skel-detail-%s">'
             '<span class="skel-card-tag" data-i18n="graphtag">%s</span>'
             '<span class="skel-card-body">%s'
-            '<span class="skel-card-txt">'
-            '<span class="skel-card-comp">%s</span>'
+            '<span class="skel-card-txt">%s'
             '<span class="skel-card-key" data-skel-short="%s" data-skel-len="110">%s</span>'
             '</span></span></button>'
             '<div class="skel-detail" id="skel-detail-%s" data-chunk="%s" hidden>'
@@ -1085,7 +1206,7 @@ class SkeletonView(object):
             '</div></div>'
             % (_esc(chunk), _esc(chunk), _esc(key), _esc(self.label_hu[key]), helper,
                _esc(chunk), _esc(chunk), _esc(UI_STRINGS["hu"]["graphtag"]),
-               self._thumb_svg(chunk), _esc(self._composition(chunk)),
+               self._thumb_svg(chunk), self._composition(chunk),
                _esc(key), _esc(shorten(self.label_hu[key], 110)),
                _esc(chunk), _esc(chunk),
                lane["gutter"], self._lane_rows_html(chunk), self._tree_html(chunk)))
@@ -1127,7 +1248,9 @@ class SkeletonView(object):
             '<li>Vízszintes vonalka a pont alatt = a szöveg ezt csak lábjegyzetben mondja ki.</li>'
             '<li>Gyémánt az élen = megnevezett következtetési séma; rákoppintva megmondja, melyik.</li>'
             '<li><span class="skel-legend-q">❝</span> = ugrás a pontos mondatra az '
-            'angol szövegben.</li>'
+            'angol szövegben. Ha a jel mellett szám áll, az állítás több mondaton '
+            'nyugszik: újra rákoppintva a következőre lép, és a kiemeléstörlő sáv '
+            'megmutatja, hányadiknál tartasz.</li>'
             '</ul></div>' % (len(self.by_id), interp))
 
     def json_blob(self):
@@ -1174,6 +1297,10 @@ class SkeletonView(object):
             "fans": fans,
             "labels": {"en": self.label_en, "hu": self.label_hu},
             "ui": UI_STRINGS,
+            # The lane grid, so the JS can name a run's column from a row's depth
+            # instead of re-deriving the geometry it was handed.
+            "lane": [LANE_X0, LANE_PITCH],
+            "markGlyphs": MARK_GLYPHS,
             "thesis": {"id": self.thesis["id"], "note": THESIS_NOTE,
                        "scheme": (self.thesis_edge or {}).get("scheme")},
         }
@@ -1366,6 +1493,19 @@ svg.skel-thumb{flex:0 0 auto;width:124px;height:auto;max-height:86px}
 .skel-lane.sk-bp-mid{top:0;bottom:0}
 .skel-lane.sk-bp-down,.skel-lane.sk-bp-up,.skel-lane.sk-bp-mid{
   background:repeating-linear-gradient(to bottom,var(--sk-line) 0 2px,transparent 2px 4px)}
+/* A second parent is a real edge but never the reading order's spine: at full
+   strength it competes with the tree for the eye on every row it crosses. It
+   stays faint until one of its two endpoint rows is the live one, and then it
+   lights along its whole length - the three rows that draw its parts all carry
+   the same data-bp. */
+.sk-ed-bypass,.sk-term-bypass,.skel-lane.sk-bp-down,.skel-lane.sk-bp-up,
+.skel-lane.sk-bp-mid{opacity:.3}
+.sk-ed-bypass.sk-bp-on{opacity:1;stroke:var(--accent)}
+.sk-term-bypass.sk-bp-on{opacity:1;fill:var(--accent)}
+.skel-lane.sk-bp-on{opacity:1;
+  background:repeating-linear-gradient(to bottom,var(--accent) 0 2px,transparent 2px 4px)}
+.skel-bpx{position:absolute;top:calc(var(--sk-mark) - 13px);height:26px;border:0;
+  background:transparent;padding:0;cursor:help;z-index:1;border-radius:6px}
 svg.skel-lhead{position:absolute;left:0;top:0;pointer-events:none;overflow:visible}
 .sk-ed{fill:none;stroke:var(--sk-line);stroke-width:1.5}
 .sk-ed-elaborates{stroke-width:1;opacity:.35}
@@ -1394,12 +1534,20 @@ svg.skel-lhead{position:absolute;left:0;top:0;pointer-events:none;overflow:visib
 .skel-lrow.sk-r-self{background:color-mix(in srgb,var(--accent) 10%,transparent);
   border-radius:6px}
 .skel-lrow.sk-r-desc{background:color-mix(in srgb,var(--accent) 4%,transparent)}
-.skel-lrow.sk-r-anc .sk-ed,.skel-lrow.sk-r-self .sk-ed{stroke:var(--accent)}
-.skel-lrow.sk-r-anc .sk-term,.skel-lrow.sk-r-self .sk-term{fill:var(--accent)}
+/* The bypass is excluded here: its whole point is that it stays quiet unless it
+   is the edge being asked about, and sk-bp-on is what says so. */
+.skel-lrow.sk-r-anc .sk-ed:not(.sk-ed-bypass),
+.skel-lrow.sk-r-self .sk-ed:not(.sk-ed-bypass){stroke:var(--accent)}
+.skel-lrow.sk-r-anc .sk-term:not(.sk-term-bypass),
+.skel-lrow.sk-r-self .sk-term:not(.sk-term-bypass){fill:var(--accent)}
 .skel-lrow.sk-r-anc .sk-term-bar,.skel-lrow.sk-r-self .sk-term-bar{
   fill:none;stroke:var(--accent)}
 .skel-lrow.sk-r-anc .sk-mdot,.skel-lrow.sk-r-anc .sk-mkey{fill:var(--accent)}
 .skel-lrow.sk-r-anc .sk-minterp{stroke:var(--accent)}
+/* The elbows are SVG and the verticals they meet are CSS divs owned by other
+   rows, so accenting only the elbows leaves the chain broken between them.
+   activateRow() adds sk-l-on to exactly the segments on the path to the root. */
+.skel-lane.sk-l-on{background:var(--accent)}
 
 /* ---------- nested-list fallback (<700px) ---------- */
 .skel-list{margin-top:4px}
@@ -1456,6 +1604,14 @@ svg.skel-lhead{position:absolute;left:0;top:0;pointer-events:none;overflow:visib
   border-radius:22px;background:var(--card-bg);color:var(--fg);font-size:13px;cursor:pointer;
   box-shadow:0 6px 20px rgba(0,0,0,.18);font-family:inherit}
 .skel-float-x{color:var(--muted)}
+/* The counter that makes repeat-tap quote cycling discoverable: without it the
+   second tap looks like the first one misfired. It rides the clear bar, which
+   is on screen for exactly as long as a highlight is. */
+.skel-qcount{display:inline-flex;align-items:center;min-height:44px;padding:8px 14px;
+  border:1px solid var(--rule);border-radius:22px;background:var(--card-bg);
+  color:var(--muted);font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,.18);
+  font-family:inherit}
+.skel-qcount[hidden]{display:none}
 mark.skel-hit{background:color-mix(in srgb,var(--accent) 26%,transparent);
   color:inherit;border-radius:3px;padding:1px 0}
 .skel-flash{animation:skel-flash 1.2s ease-out 1}
@@ -1479,10 +1635,6 @@ mark.skel-hit{background:color-mix(in srgb,var(--accent) 26%,transparent);
 #tip .skel-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 #tip .skel-word{display:inline-flex;align-items:center;min-height:24px;padding:2px 9px;
   border:1px solid var(--rule);border-radius:12px;color:var(--muted);font-size:12px}
-#tip .skel-qlist{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-#tip .skel-qbtn{min-height:44px;padding:6px 12px;border:1px solid var(--rule);
-  border-radius:22px;background:var(--card-bg);color:var(--accent);font-size:13px;
-  cursor:pointer;font-family:inherit}
 /* the ervvaz toggle shares .themebtn's look; only the on-state differs */
 .skelbtn.on{background:var(--accent);color:var(--bg);border-color:var(--accent)}
 .skel-langpill{display:inline-flex;border:1px solid var(--rule);border-radius:20px;
@@ -1507,6 +1659,7 @@ SKEL_JS = r"""
   var backX = document.getElementById('skel-back-x');
   var clearBar = document.getElementById('skel-clear');
   var clearBtn = document.getElementById('skel-clear-btn');
+  var qCount = document.getElementById('skel-qcount');
   var legend = document.getElementById('skel-legend');
   var tip = document.getElementById('tip');
   var on = false;                 // default OFF on every load; never persisted
@@ -1514,11 +1667,26 @@ SKEL_JS = r"""
   var backTarget = null;
   var cardKey = null;             // what the shared #tip currently shows
   var hoverTimer = null;
+  var qNode = null, qIdx = 0;     // the node whose anchors are being cycled
   var finePointer = window.matchMedia &&
     window.matchMedia('(hover:hover) and (pointer:fine)').matches;
 
   function L(id){ var m = SKEL.labels[lang]; return (m && m[id]) || SKEL.labels.en[id] || id; }
   function U(key){ return (SKEL.ui[lang] || SKEL.ui.hu)[key] || ''; }
+  // Mirror of _fmt() in skeleton_view.py: the same string is rendered once at
+  // build time and again here after a language switch, so both have to agree.
+  function T(key, args){
+    var s = U(key);
+    if (!args || !args.length) return s;
+    return s.replace(/%(\d)/g, function(all, k){
+      var v = args[k - 1];
+      return v == null ? all : String(v);
+    });
+  }
+  function argsOf(el){
+    var a = el.getAttribute('data-i18n-args');
+    return a ? a.split('|') : null;
+  }
   function esc(s){
     return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -1543,7 +1711,7 @@ SKEL_JS = r"""
       if (blocks[i].hasAttribute('data-skel-block')) blocks[i].hidden = !on;
     }
     if (langPill) langPill.hidden = !on;
-    if (!on){ clearMarks(); hideBack(); closeTip(); clearRows(); hideLegend(); }
+    if (!on){ dismiss(); hideBack(); closeTip(); clearRows(); hideLegend(); }
   }
 
   function applyLang(){
@@ -1558,7 +1726,7 @@ SKEL_JS = r"""
     }
     els = document.querySelectorAll('[data-i18n]');
     for (i = 0; i < els.length; i++){
-      els[i].textContent = U(els[i].getAttribute('data-i18n'));
+      els[i].textContent = T(els[i].getAttribute('data-i18n'), argsOf(els[i]));
     }
   }
   function setLang(next){
@@ -1620,7 +1788,7 @@ SKEL_JS = r"""
     var meta = SKEL.chunks[chunk];
     if (!meta) return '';
     var out = '<span class="skel-peek-num">' + esc(chunk) + ' · ' +
-              meta.d1 + ' állítás</span>' +
+              esc(T('n-claims', [meta.d1])) + '</span>' +
               '<span class="skel-peek-label">' + esc(L(meta.key)) + '</span>';
     if (meta.scheme){
       out += '<span class="skel-word">' +
@@ -1630,13 +1798,13 @@ SKEL_JS = r"""
     // view: `up` is what it rests on, `down` is what rests on it. "ezt
     // használja" read as if THIS chunk used the listed ones - the arrow the
     // wrong way round.
-    out += chunkRow('mire épül:', meta.up);
-    out += chunkRow('építenek rá:', meta.down);
+    out += chunkRow(U('builds-on'), meta.up);
+    out += chunkRow(U('built-on-by'), meta.down);
     out += '<span class="skel-actions">' +
            '<button type="button" class="skel-goto skel-keep" data-skel-travel="' +
-           esc(chunk) + '">→ elejére</button>' +
+           esc(chunk) + '">' + esc(U('to-start')) + '</button>' +
            '<button type="button" class="skel-goto skel-keep" data-skel-detail="' +
-           esc(chunk) + '">⋮ részletei</button></span>';
+           esc(chunk) + '">' + esc(U('details')) + '</button></span>';
     return out;
   }
   function edgeCard(key){
@@ -1650,37 +1818,36 @@ SKEL_JS = r"""
     }
     return out;
   }
-  function markerCard(nid){
-    var meta = SKEL.nodes[nid];
-    if (!meta) return '';
-    var interp = !SKEL.anchors[nid];
-    var head = esc(meta.chunk) + (interp ? ' · a térkép tette hozzá'
-                                         : ' · állítás');
-    var out = '<span class="skel-peek-num">' + head + '</span>' +
-              '<span class="skel-peek-label">' + esc(L(nid)) + '</span>';
-    var par = SKEL.parent[nid];
-    if (par){
-      out += '<span class="skel-peek-role">alátámasztja → ' +
-             esc(shorten(L(par), 80)) + '</span>';
-    }
-    var list = SKEL.anchors[nid] || [];
-    if (list.length){
-      out += '<span class="skel-qlist">';
-      for (var i = 0; i < list.length; i++){
-        var lbl = list[i].fn != null ? '❝ lj. [' + list[i].fn + ']'
-                                     : '❝' + (list.length > 1 ? (i + 1) : '');
-        out += '<button type="button" class="skel-qbtn skel-keep"' +
-               (list[i].ok ? '' : ' disabled') +
-               ' data-skel-qjump="' + esc(nid) + '" data-skel-qi="' + i + '">' +
-               esc(lbl) + '</button>';
-      }
-      out += '</span>';
-    }
-    out += '<span class="skel-actions">' +
-           '<button type="button" class="skel-goto skel-keep" data-skel-travel="' +
-           esc(meta.chunk) + '">→ odaugrás</button></span>';
-    return out;
+  // v2.1 opened a card on every row marker, restating the row's own label, its
+  // parent's label and its quote buttons - all three already on screen, one row
+  // away. It is gone. A marker now says only what its GLYPH means, in the same
+  // gloss the scheme diamond has always used; the row itself says the rest.
+  function markGlossCard(key, args){
+    var text = T(key, args);
+    if (!text) return '';
+    return '<span class="skel-peek-num">' + esc(SKEL.markGlyphs[key] || '') +
+           '</span><p>' + esc(text) + '</p>';
   }
+  // A second parent: the one edge whose meaning the picture cannot carry, since
+  // its target sits rows away in a lane of its own.
+  function bypassCard(nid){
+    var label = L(nid);
+    if (!label) return '';
+    return '<span class="skel-peek-num">↗</span><p>' +
+           esc(T('bp-also', [shorten(label, 74)])) + '</p>';
+  }
+  // The three gloss families share one shape, so they share one lookup: the
+  // attribute an element carries decides which sentence it gets.
+  function glossOf(el){
+    var k = el.getAttribute('data-skel-gloss');
+    if (k) return [glossCard(k), 'gloss:' + k];
+    k = el.getAttribute('data-skel-mg');
+    if (k) return [markGlossCard(k, argsOf(el)), 'mg:' + k];
+    k = el.getAttribute('data-skel-bp');
+    if (k) return [bypassCard(k), 'bp:' + k];
+    return null;
+  }
+  var GLOSS_SEL = '[data-skel-gloss],[data-skel-mg],[data-skel-bp]';
 
   /* ---- travel ------------------------------------------------------- */
   function flash(el){
@@ -1747,6 +1914,19 @@ SKEL_JS = r"""
       p.normalize();            // mandatory: mark residue would split text nodes
     }
     clearBar.hidden = true;
+    if (qCount) qCount.hidden = true;
+  }
+  // clearMarks() also runs mid-jump, twice, to guarantee a single mark; only
+  // dismiss() means "the reader is done with this node", so only dismiss()
+  // forgets where the quote cycle stood.
+  function dismiss(){ qNode = null; qIdx = 0; clearMarks(); }
+  function showQCount(i, n){
+    if (!qCount) return;
+    if (n < 2){ qCount.hidden = true; return; }
+    qCount.setAttribute('data-i18n', 'quote-n');
+    qCount.setAttribute('data-i18n-args', i + '|' + n);
+    qCount.textContent = T('quote-n', [i, n]);
+    qCount.hidden = false;
   }
   function findInNode(node, quote){
     var i = node.data.indexOf(quote);
@@ -1807,17 +1987,26 @@ SKEL_JS = r"""
     }
     return false;
   }
-  // Always the SAME anchor for the same request: v1's repeated-tap cycling is
-  // gone; a numbered button in the node card is how you reach anchor 2 and 3.
+  // Repeated taps on one ❝ walk that node's anchors, 1 -> 2 -> 3 -> 1. v2.1 had
+  // this too and it was undiscoverable, because nothing on screen said which of
+  // the three you were looking at; the clear bar's counter is what fixes that,
+  // so the two ship together or not at all.
+  function nextQuoteIndex(nodeId){
+    var list = SKEL.anchors[nodeId];
+    if (!list || !list.length) return 0;
+    return qNode === nodeId ? (qIdx + 1) % list.length : 0;
+  }
   function jump(nodeId, index){
     var list = SKEL.anchors[nodeId];
     if (!list || !list.length) return;
-    var anchor = list[index || 0];
-    if (!anchor || !anchor.ok){
-      for (var i = 0; i < list.length && (!anchor || !anchor.ok); i++) anchor = list[i];
+    var n = list.length, at = (index || 0) % n, anchor = list[at], hops = 0;
+    while (hops++ < n && (!anchor || !anchor.ok)){   // skip anchors that failed
+      at = (at + 1) % n;                             // the build-time verifier
+      anchor = list[at];
     }
     if (!anchor || !anchor.ok) return;
     clearMarks();
+    qNode = nodeId; qIdx = at;
     var sec = document.getElementById('sec-' + anchor.sec);
     if (!sec) return;
     var article = sec.querySelector('article.orig.lang-en');
@@ -1831,6 +2020,7 @@ SKEL_JS = r"""
           mark.scrollIntoView();
         }
         clearBar.hidden = false;
+        showQCount(at + 1, n);
         return;
       }
       var fallback = null;
@@ -1866,10 +2056,44 @@ SKEL_JS = r"""
 
   /* ---- detail rows -------------------------------------------------- */
   function clearRows(){
-    var els = document.querySelectorAll('.skel-lrow.sk-r-self,.skel-lrow.sk-r-anc,' +
-                                        '.skel-lrow.sk-r-desc');
-    for (var i = 0; i < els.length; i++){
+    var i, els = document.querySelectorAll('.skel-lrow.sk-r-self,.skel-lrow.sk-r-anc,' +
+                                           '.skel-lrow.sk-r-desc');
+    for (i = 0; i < els.length; i++){
       els[i].classList.remove('sk-r-self', 'sk-r-anc', 'sk-r-desc');
+    }
+    els = document.querySelectorAll('.sk-l-on,.sk-bp-on');
+    for (i = 0; i < els.length; i++) els[i].classList.remove('sk-l-on', 'sk-bp-on');
+  }
+  // Lane segments of one row in one column, named the way _derive_lanes() hands
+  // them over: the column is the inline `left` the segment needed anyway, the
+  // part is its class. A null `part` means every segment this row owns there.
+  function lightLanes(row, x, part){
+    if (!row) return;
+    var els = row.querySelectorAll('.skel-lane');
+    for (var i = 0; i < els.length; i++){
+      var e = els[i];
+      if (parseInt(e.style.left, 10) !== x) continue;
+      var k = e.classList.contains('sk-l-up') ? 'up'
+            : (e.classList.contains('sk-l-down') ? 'down' : 'full');
+      if (!part || k === part) e.classList.add('sk-l-on');
+    }
+  }
+  // The run from a child up to its parent is drawn by every row in between, in
+  // the parent's column: the parent owns the half below its own marker, the
+  // rows between own whatever they own there, and the child owns only the half
+  // ABOVE its marker - the half below it belongs to the child's later siblings,
+  // and lighting it would run the accent into a branch that is not on the path.
+  // That one distinction is why a child's segment is split at all.
+  function lightChain(rows, parentOf, from){
+    var c = from;
+    while (parentOf[c] != null){
+      var p = parentOf[c];
+      var d = parseInt(rows[c].getAttribute('data-depth'), 10);
+      var x = SKEL.lane[0] + SKEL.lane[1] * (d - 1);
+      lightLanes(rows[c], x, 'up');
+      for (var k = p + 1; k < c; k++) lightLanes(rows[k], x, null);
+      lightLanes(rows[p], x, 'down');
+      c = p;
     }
   }
   function activateRow(row){
@@ -1895,6 +2119,15 @@ SKEL_JS = r"""
       if (anc[i]) rows[i].classList.add('sk-r-anc');
       else if (desc[i]) rows[i].classList.add('sk-r-desc');
     }
+    lightChain(rows, parentOf, self);
+    // A bypass belongs to the two rows it joins, not to the chain, so it lights
+    // only when one of those two is the live row.
+    var bp = row.getAttribute('data-bpend');
+    if (bp != null){
+      var parts = lanes.querySelectorAll('.skel-lane[data-bp="' + bp + '"],' +
+                                         'path[data-bp="' + bp + '"]');
+      for (i = 0; i < parts.length; i++) parts[i].classList.add('sk-bp-on');
+    }
   }
 
   /* ---- legend ------------------------------------------------------- */
@@ -1913,22 +2146,18 @@ SKEL_JS = r"""
   // Desktop: hovering a node opens its card after a beat; clicking navigates.
   // Touch: the first tap opens the card, the second tap on the same node
   // navigates. Both paths go through the same two functions.
-  // `data-skel-node` carries two different vocabularies: a CHUNK id inside the
-  // minimap, a NODE id everywhere else (the detail view's row markers, the list
-  // view's second-parent chips). Which card to build follows from WHERE the
-  // affordance sits, never from guessing at the id - reading it as a chunk id
-  // outside the map is what used to hand nodeCard() an unknown key and open an
-  // empty card.
+  // `data-skel-node` now means one thing only - a CHUNK id, inside the minimap.
+  // The detail view's row markers and the list view's second-parent chips used
+  // to share the attribute with a NODE id in it, which is how nodeCard() kept
+  // being handed an unknown key; they carry their own gloss attributes instead.
   function mapOf(el){ return (el && el.closest) ? el.closest('svg.skel-map') : null; }
   function openNode(el, id){
-    var svg = mapOf(el);
-    if (!svg) return openTip(el, markerCard(id), 'mark:' + id);
     var opened = openTip(el, nodeCard(id), 'node:' + id);
-    if (id !== 'thesis') lightIncident(svg, id);
+    if (id !== 'thesis') lightIncident(mapOf(el), id);
     return opened;
   }
   function nodeActivate(el, chunk){
-    if (chunk === 'thesis' || !mapOf(el)){ openNode(el, chunk); return; }
+    if (chunk === 'thesis'){ openNode(el, chunk); return; }
     if (tipShows('node:' + chunk)){ travel(chunk, originOf(el)); return; }
     openNode(el, chunk);
   }
@@ -1943,6 +2172,16 @@ SKEL_JS = r"""
         hoverTimer = setTimeout(function(){
           openNode(hit, hit.getAttribute('data-skel-node'));
         }, 120);
+        return;
+      }
+      // Glosses answer "what does this symbol mean", which is a question the
+      // reader has while looking at the symbol - so on a fine pointer they
+      // open on hover, on the same beat as everything else here.
+      var gl = t.closest(GLOSS_SEL);
+      if (gl){
+        clearTimeout(hoverTimer);
+        var g = glossOf(gl);
+        if (g) hoverTimer = setTimeout(function(){ openTip(gl, g[0], g[1]); }, 120);
         return;
       }
       var edge = t.closest('[data-arc],[data-fan]');
@@ -1963,7 +2202,9 @@ SKEL_JS = r"""
     document.addEventListener('mouseout', function(ev){
       var t = ev.target;
       if (!t || !t.closest) return;
-      if (t.closest('[data-skel-node],[data-arc],[data-fan]')) clearTimeout(hoverTimer);
+      if (t.closest('[data-skel-node],[data-arc],[data-fan],' + GLOSS_SEL)) {
+        clearTimeout(hoverTimer);
+      }
     });
   }
 
@@ -1971,16 +2212,24 @@ SKEL_JS = r"""
     var t = ev.target;
     if (!t || !t.closest) return;
 
+    // Glosses come first: a row marker and a bypass stub both sit inside a row
+    // that would otherwise swallow the click at the bottom of this handler.
+    var gl = t.closest(GLOSS_SEL);
+    if (gl){
+      var g = glossOf(gl);
+      if (g) openTip(gl, g[0], g[1]);
+      // The marker is still the row's own affordance, so it keeps highlighting
+      // the row; that, plus keyboard focus, is all it does now.
+      if (gl.classList.contains('skel-mark')){
+        var mrow = gl.closest('.skel-lrow');
+        if (mrow) activateRow(mrow);
+      }
+      return;
+    }
     var nodeHit = t.closest('[data-skel-node]');
     if (nodeHit){
       var chunk = nodeHit.getAttribute('data-skel-node');
-      if (nodeHit.classList.contains('skel-mark')){
-        openNode(nodeHit, chunk);
-        var row = nodeHit.closest('.skel-lrow');
-        if (row) activateRow(row);
-        return;
-      }
-      if (finePointer && mapOf(nodeHit)){
+      if (finePointer){
         if (chunk === 'thesis') openNode(nodeHit, chunk);
         else travel(chunk, originOf(nodeHit));
         return;
@@ -1988,18 +2237,10 @@ SKEL_JS = r"""
       nodeActivate(nodeHit, chunk);
       return;
     }
-    var gloss = t.closest('[data-skel-gloss]');
-    if (gloss){
-      var g = gloss.getAttribute('data-skel-gloss');
-      openTip(gloss, glossCard(g), 'gloss:' + g);
-      return;
-    }
     var quote = t.closest('.skel-quote');
-    if (quote && !quote.disabled){ jump(quote.getAttribute('data-skel-quote'), 0); return; }
-    var qbtn = t.closest('[data-skel-qjump]');
-    if (qbtn && !qbtn.disabled){
-      jump(qbtn.getAttribute('data-skel-qjump'),
-           parseInt(qbtn.getAttribute('data-skel-qi'), 10) || 0);
+    if (quote && !quote.disabled){
+      var qid = quote.getAttribute('data-skel-quote');
+      jump(qid, nextQuoteIndex(qid));
       return;
     }
     var card = t.closest('.skel-card');
@@ -2048,26 +2289,26 @@ SKEL_JS = r"""
     if (origin) window.SKEL_LAST_ORIGIN = origin;
   }, true);
 
-  // Any pointer press outside a mark, the clear chip or a quote button
-  // dismisses the highlight. Namespaced so the existing #tip handlers are
-  // untouched.
+  // Any pointer press outside a mark, the clear bar or a quote button dismisses
+  // the highlight - and ends the quote cycle, since the reader has moved on.
+  // Namespaced so the existing #tip handlers are untouched.
   document.addEventListener('pointerdown', function(ev){
     if (clearBar.hidden) return;
     var t = ev.target;
     if (t && t.closest && (t.closest('mark.skel-hit') || t.closest('#skel-clear') ||
-        t.closest('.skel-quote') || t.closest('[data-skel-qjump]'))) return;
-    clearMarks();
+        t.closest('.skel-quote'))) return;
+    dismiss();
   }, true);
 
   document.addEventListener('keydown', function(ev){
     if (ev.key !== 'Escape') return;
     if (legend && !legend.hidden){ hideLegend(); return; }
-    if (!clearBar.hidden) clearMarks();
+    if (!clearBar.hidden) dismiss();
     clearRows();
     hideBack();
   });
 
-  clearBtn.addEventListener('click', function(){ clearMarks(); clearRows(); });
+  clearBtn.addEventListener('click', function(){ dismiss(); clearRows(); });
   backBtn.addEventListener('click', function(){
     if (backTarget){ var to = backTarget; hideBack(); travel(to, null); }
   });
@@ -2081,11 +2322,6 @@ SKEL_JS = r"""
       if (g){ travel(g.getAttribute('data-skel-travel'), window.SKEL_LAST_ORIGIN || null); return; }
       var d = t.closest('[data-skel-detail]');
       if (d){ openDetail(d.getAttribute('data-skel-detail'), true); return; }
-      var q = t.closest('[data-skel-qjump]');
-      if (q && !q.disabled){
-        jump(q.getAttribute('data-skel-qjump'),
-             parseInt(q.getAttribute('data-skel-qi'), 10) || 0);
-      }
     });
   }
 
