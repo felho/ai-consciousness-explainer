@@ -491,6 +491,11 @@ const IMGS = {imgs};
   }});
   const tip = document.getElementById('tip');
   let hideTimer = null, overTip = false, curr = null;
+  // A borrowed card can ask for a longer leave grace and can veto one hide,
+  // which is how the skeleton keeps a card alive while the reader is still
+  // travelling to it. Source-link cards never set these, so their timing is
+  // untouched; both reset on every open and on hide.
+  let graceMs = 180, keepAlive = null;
   function place(el){{
     const r = el.getBoundingClientRect();
     const sx = window.scrollX, sy = window.scrollY;
@@ -511,6 +516,7 @@ const IMGS = {imgs};
     const id = el.getAttribute('data-card');
     if (!CARDS[id]) return;
     clearTimeout(hideTimer);
+    graceMs = 180; keepAlive = null;
     if (curr !== el){{
       // drop any borrowed variant, or a source card would inherit its styling
       tip.className = '';
@@ -521,12 +527,17 @@ const IMGS = {imgs};
   }}
   function hide(){{
     tip.classList.remove('show'); curr = null; overTip = false;
+    graceMs = 180; keepAlive = null;
   }}
   function scheduleHide(){{
     clearTimeout(hideTimer);
     hideTimer = setTimeout(function(){{
-      if (!overTip) hide();
-    }}, 180);
+      if (overTip) return;
+      // The veto re-arms the timer instead of pinning the card open, so the
+      // owner of the card decides each round whether it still deserves to live.
+      if (keepAlive && keepAlive()) {{ scheduleHide(); return; }}
+      hide();
+    }}, graceMs);
   }}
   document.querySelectorAll('a.src[data-card]').forEach(function(el){{
     el.addEventListener('mouseenter', function(){{ show(el); }});
@@ -540,9 +551,11 @@ const IMGS = {imgs};
   // an optional class for a borrowed shape (the skeleton's compact gloss); it
   // lives on the element, so it is cleared by the next open on either path.
   window.SKEL_TIP = {{
-    open: function(el, inner, variant){{
+    open: function(el, inner, variant, opts){{
       clearTimeout(hideTimer);
       curr = null;
+      graceMs = (opts && opts.grace) || 180;
+      keepAlive = (opts && opts.keepAlive) || null;
       tip.className = variant || '';
       tip.innerHTML = '<button class="tip-close" aria-label="Bezárás" title="Bezárás">×</button>' + inner;
       place(el);

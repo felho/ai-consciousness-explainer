@@ -1509,8 +1509,15 @@ svg.skel-map .sk-hot .sk-head.sk-hollow{fill:var(--bg);stroke:var(--accent)}
 svg.skel-map .sk-hot{opacity:1}
 .sk-arc.sk-epast,.sk-fan.sk-epast{opacity:.7}
 .sk-arc.sk-eahead,.sk-fan.sk-eahead,.sk-chev.sk-eahead{opacity:.35}
-/* hit areas */
+/* hit areas.
+   Cursor rule, page-wide: an affordance that only EXPLAINS gets `help` - the
+   precedent is a.src, the source links, which have used it since v1 for "hover
+   tells you what this is". An affordance that NAVIGATES or changes state gets
+   `pointer`. So the node cells and the capsule (a click travels to them) are
+   pointer, while the scheme glyphs sharing the same .sk-hit class only ever
+   open a gloss and are overridden below. */
 .sk-hit{fill:transparent;stroke:none;cursor:pointer}
+.sk-hit.sk-glyphhit{cursor:help}
 .sk-hit-e{fill:none;stroke:transparent;stroke-width:14;pointer-events:none}
 /* Arcs nest 13.2 units apart, so their hit stroke has to stay under that or
    two neighbouring nesting levels would share one hover target. */
@@ -1650,8 +1657,11 @@ svg.skel-lhead{position:absolute;left:0;top:0;pointer-events:none;overflow:visib
    CENTRE and the stub's box ran under all of it, so the diamond's own pixels
    answered with the marker's gloss on the right half and the bypass's on the
    left, and its own gloss was only reachable in a 6px strip beside it. */
+/* `help`, not `pointer`: since v2.2 the marker's whole job is to explain its own
+   glyph - the card it used to open is gone. Row highlighting rides along, but
+   it is not what the reader is being offered. */
 .skel-mark{position:absolute;top:calc(var(--sk-mark) - 15px);width:26px;height:30px;
-  border:0;background:transparent;padding:0;cursor:pointer;z-index:2;border-radius:6px}
+  border:0;background:transparent;padding:0;cursor:help;z-index:2;border-radius:6px}
 .skel-mark:focus-visible{outline:2px solid var(--accent);outline-offset:0}
 /* 17px, not 16: the box is left-edge inclusive and right-edge exclusive, so 16
    would leave the diamond's own right vertex (and its 1.2px stroke) to the
@@ -1700,8 +1710,10 @@ svg.skel-lhead{position:absolute;left:0;top:0;pointer-events:none;overflow:visib
   border:1px solid var(--rule);border-radius:13px;background:var(--card-bg);
   color:var(--muted);font-size:12px;line-height:1.2;font-family:inherit}
 .skel-chip.skel-add,.skel-chip.skel-fn{border-style:dashed}
+/* the list fallback's second-parent chip: gloss-only, like the lane view's
+   .skel-bpx it stands in for */
 .skel-also{min-width:44px;min-height:44px;border:0;background:transparent;
-  color:var(--muted);font-size:15px;cursor:pointer;font-family:inherit;
+  color:var(--muted);font-size:15px;cursor:help;font-family:inherit;
   margin:-11px 0;vertical-align:middle}
 .skel-also:hover{color:var(--accent)}
 .skel-quote{display:inline-flex;align-items:center;justify-content:center;
@@ -1899,13 +1911,59 @@ SKEL_JS = r"""
   function hasContent(inner){
     return !!inner && String(inner).replace(/<[^>]*>/g, '').trim() !== '';
   }
+  // The corridor is the strip the reader crosses between the thing they hovered
+  // and the card that answered. A card is placed about 8px from its trigger, and
+  // for a minimap node that gap lands inside the arc band - so the corridor is
+  // where a card used to be lost on the way to it. Two things consult it: the
+  // hide timer (stay while the reader is still travelling) and the arc/fan hover
+  // (do not hand the card to an edge the reader is only passing over).
+  var corridor = null, keepFrom = 0, ptrX = -1, ptrY = -1;
+  document.addEventListener('pointermove', function(ev){
+    ptrX = ev.clientX; ptrY = ev.clientY;
+  }, {passive: true});
+  function setCorridor(el){
+    if (!el || !tip){ corridor = null; return; }
+    var a = el.getBoundingClientRect(), b = tip.getBoundingClientRect();
+    corridor = {l: Math.min(a.left, b.left) - 8, r: Math.max(a.right, b.right) + 8,
+                t: Math.min(a.top, b.top) - 8, bt: Math.max(a.bottom, b.bottom) + 8};
+    keepFrom = 0;
+  }
+  // The card can also be taken down by the page itself - an outside press, or
+  // the grace running out - and those paths do not go through closeTip(). So a
+  // corridor only counts while its card is actually on screen; without this
+  // check a stale corridor would go on swallowing arc hovers in that region
+  // long after the card it belonged to was gone.
+  function inCorridor(x, y){
+    return !!corridor && !!tip && tip.classList.contains('show') &&
+           x >= corridor.l && x <= corridor.r &&
+           y >= corridor.t && y <= corridor.bt;
+  }
+  // Re-armed once per grace period, and capped: a pointer parked in the corridor
+  // without ever arriving must not pin the card open for the rest of the visit.
+  function keepAlive(){
+    if (!corridor) return false;
+    if (!keepFrom) keepFrom = Date.now();
+    if (Date.now() - keepFrom > 1200 || !inCorridor(ptrX, ptrY)){
+      keepFrom = 0;
+      return false;
+    }
+    return true;
+  }
+  var TIP_OPTS = {grace: 420, keepAlive: keepAlive};
+
   function openTip(el, inner, key, variant){
     if (!hasContent(inner)){ closeTip(); return false; }
     cardKey = key || null;
-    if (window.SKEL_TIP) window.SKEL_TIP.open(el, inner, variant);
+    if (window.SKEL_TIP){
+      window.SKEL_TIP.open(el, inner, variant, TIP_OPTS);
+      setCorridor(el);
+    }
     return true;
   }
-  function closeTip(){ cardKey = null; if (window.SKEL_TIP) window.SKEL_TIP.close(); }
+  function closeTip(){
+    cardKey = null; corridor = null; keepFrom = 0;
+    if (window.SKEL_TIP) window.SKEL_TIP.close();
+  }
   function tipShows(key){
     return cardKey === key && tip && tip.classList.contains('show');
   }
@@ -2343,6 +2401,14 @@ SKEL_JS = r"""
       }
       var edge = t.closest('[data-arc],[data-fan]');
       if (edge && edge.closest('svg.skel-map')){
+        // An edge card used to open with NO delay, alone among the hover cards.
+        // A node's card sits about 8px below it, which is inside the arc band,
+        // so a single mousemove sample landing on an 11px-wide arc stroke swapped
+        // the card out from under a reader walking toward it - and only a dart
+        // fast enough to skip the stroke got through. Now it waits the same beat
+        // as everything else, and inside an open card's corridor it does not
+        // even start: those arcs are under the card anyway.
+        if (inCorridor(ev.clientX, ev.clientY)) return;
         clearTimeout(hoverTimer);
         var key = edge.getAttribute('data-arc');
         if (!key){
@@ -2353,7 +2419,9 @@ SKEL_JS = r"""
             if (f) SKEL.arcs[key] = {a: c, b: SKEL.roof, edges: f};
           }
         }
-        if (openTip(edge, edgeCard(key), 'edge:' + key)) edge.classList.add('sk-hot');
+        hoverTimer = setTimeout(function(){
+          if (openTip(edge, edgeCard(key), 'edge:' + key)) edge.classList.add('sk-hot');
+        }, 120);
       }
     });
     document.addEventListener('mouseout', function(ev){
