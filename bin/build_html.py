@@ -20,6 +20,10 @@ import html
 import json
 import os
 import re
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import skeleton_view  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECTIONS_DIR = os.path.join(ROOT, "sections")
@@ -235,16 +239,37 @@ def render_variant(sdir, fname, linkmap, si, lang):
 
 
 def main():
+    with_skeleton = "--no-skeleton" not in sys.argv[1:]
+
     section_dirs = sorted(
         d for d in glob.glob(os.path.join(SECTIONS_DIR, "*")) if os.path.isdir(d)
     )
+    # Physical section id ("00" ... "07") -> index of the rendered section.
+    section_index = {os.path.basename(d).split("-", 1)[0]: i
+                     for i, d in enumerate(section_dirs)}
+
+    view = None
+    if with_skeleton:
+        # A malformed skeleton is a build failure: silently shipping the page
+        # without the reading aid would hide the breakage. --no-skeleton is the
+        # deliberate escape hatch.
+        try:
+            view = skeleton_view.load_view(section_index)
+        except skeleton_view.SkeletonError as exc:
+            print("SKELETON FAILURE: %s" % exc)
+            print("Fix skeleton/skeleton.yaml, or build without the reading aid:"
+                  "  python3 bin/build_html.py --no-skeleton")
+            return 2
+
     toc = []
     sections_html = []
+    en_articles = {}
     for si, sdir in enumerate(section_dirs):
         linkmap = build_linkmap(sdir)
         anchor_id = "sec-%d" % si
 
         title, en_html = render_variant(sdir, "section.md", linkmap, si, "en")
+        en_articles[si] = en_html
         toc.append('<li><a href="#%s">%s</a></li>' % (anchor_id, html.escape(title)))
 
         toggle = ""
@@ -259,6 +284,9 @@ def main():
             articles += '<article class="orig lang-hu" hidden>%s</article>' % hu_html
 
         exp_html = render_explanation(read(os.path.join(sdir, "explanation.md")))
+        phys = os.path.basename(sdir).split("-", 1)[0]
+        if view:
+            sections_html.append(view.pre_html(phys))
         sections_html.append(
             '<section id="%s" class="sec">'
             '<div class="sec-head"><div class="sec-num">%02d</div>%s</div>'
@@ -267,20 +295,51 @@ def main():
             "</section>"
             % (anchor_id, si, toggle, articles, exp_html)
         )
+        if view:
+            sections_html.append(view.post_html(phys))
+
+    skel = {"skel_css": "", "skel_js": "", "skel_head": "", "skel_btn": "",
+            "skel_overlay": ""}
+    if view:
+        total, failures = view.verify_anchors(en_articles)
+        print("Anchor verifier: %d/%d anchor quote(s) resolvable in the rendered "
+              "English articles." % (total - len(failures), total))
+        for item in failures:
+            print("  WARNING unresolvable anchor - %s" % item)
+        sections_html.append(view.close_html())
+        skel = {
+            "skel_css": skeleton_view.SKEL_CSS,
+            "skel_js": "const SKEL = %s;\n%s" % (view.json_blob(), skeleton_view.SKEL_JS),
+            "skel_head": view.thesis_html() + view.legend_html(),
+            "skel_btn": '<button class="themebtn skelbtn" id="skelbtn" '
+                        'aria-pressed="false" title="Érvváz">◈ érvváz</button>',
+            "skel_overlay":
+                '<div id="skel-clear" hidden>'
+                '<button type="button" class="skel-float-btn" id="skel-clear-btn">'
+                '✕ kiemelés törlése</button></div>'
+                '<div id="skel-back" hidden>'
+                '<button type="button" class="skel-float-btn" id="skel-back-btn">'
+                '← vissza</button>'
+                '<button type="button" class="skel-float-x" id="skel-back-x" '
+                'aria-label="Bezárás" title="Bezárás">×</button></div>',
+        }
 
     cards_json = json.dumps(CARDS, ensure_ascii=False).replace("</", "<\\/")
     imgs_json = json.dumps(IMGS, ensure_ascii=False).replace("</", "<\\/")
     page = PAGE_TEMPLATE.format(
         toc="\n".join(toc),
-        sections="\n".join(sections_html),
+        sections="\n".join(h for h in sections_html if h),
         cards=cards_json,
         imgs=imgs_json,
+        **skel
     )
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, "w", encoding="utf-8") as fh:
         fh.write(page)
-    print("Wrote %s (%d sections, %d link cards, %d images)"
-          % (OUT, len(section_dirs), len(CARDS), len(IMGS)))
+    print("Wrote %s (%d sections, %d link cards, %d images%s)"
+          % (OUT, len(section_dirs), len(CARDS), len(IMGS),
+             "" if view else ", skeleton disabled"))
+    return 0
 
 
 PAGE_TEMPLATE = r"""<!doctype html>
@@ -382,23 +441,27 @@ aside.exp li{{margin:0 0 6px}}
   border:1px solid var(--card-rule);background:var(--card-bg);color:var(--muted);
   font-size:18px;line-height:1;padding:4px 9px;cursor:pointer;border-radius:8px}}
 #tip .tip-close:hover{{color:var(--fg)}}
-.themebtn{{position:fixed;top:14px;right:14px;z-index:60;border:1px solid var(--rule);
+.topbtns{{position:fixed;top:14px;right:14px;z-index:60;display:flex;gap:8px}}
+.themebtn{{border:1px solid var(--rule);
   background:var(--card-bg);color:var(--fg);border-radius:20px;padding:6px 12px;font-size:13px;cursor:pointer;
   font-family:-apple-system,system-ui,sans-serif}}
+{skel_css}
 </style>
 </head>
 <body>
-<button class="themebtn" id="themebtn" title="Világos/sötét">◐ téma</button>
+<div class="topbtns">{skel_btn}<button class="themebtn" id="themebtn" title="Világos/sötét">◐ téma</button></div>
 <header class="top">
   <h1>Time to Take AI Consciousness Seriously</h1>
   <p class="lede">Az esszé (Second Best / Samuel Hammond) szakaszonként: eredeti angol szöveg (az EN/HU kapcsolóval szakaszonként magyar fordításra váltható), alatta magyar magyarázat. A forráshivatkozások fölé húzva a linkhez tartozó teljes magyar összefoglaló jelenik meg.</p>
   <p class="byline">Eredeti: <a class="ext" href="https://www.secondbest.ca/p/time-to-take-ai-consciousness-seriously" target="_blank" rel="noopener">secondbest.ca</a></p>
 </header>
+{skel_head}
 <nav class="toc"><ol>{toc}</ol></nav>
 <main>
 {sections}
 </main>
 <div id="tip"></div>
+{skel_overlay}
 <script>
 const CARDS = {cards};
 const IMGS = {imgs};
@@ -463,6 +526,18 @@ const IMGS = {imgs};
     el.addEventListener('focus', function(){{ show(el); }});
     el.addEventListener('blur', scheduleHide);
   }});
+  // Minimal bridge so other features (the argument skeleton) can borrow this
+  // one hover card instead of building a second overlay. Resetting `curr` is
+  // what keeps the source-link cards correct after a borrowed use.
+  window.SKEL_TIP = {{
+    open: function(el, inner){{
+      clearTimeout(hideTimer);
+      curr = null;
+      tip.innerHTML = '<button class="tip-close" aria-label="Bezárás" title="Bezárás">×</button>' + inner;
+      place(el);
+    }},
+    close: hide
+  }};
   tip.addEventListener('mouseenter', function(){{ overTip = true; clearTimeout(hideTimer); }});
   tip.addEventListener('mouseleave', function(){{ overTip = false; scheduleHide(); }});
   tip.addEventListener('click', function(e){{
@@ -488,6 +563,7 @@ const IMGS = {imgs};
     root.setAttribute('data-theme', next);
   }});
 }})();
+{skel_js}
 </script>
 </body>
 </html>
@@ -495,4 +571,4 @@ const IMGS = {imgs};
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

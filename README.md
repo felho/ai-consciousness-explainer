@@ -45,8 +45,11 @@ Section `00-introduction` is the text before the first H2. Section
 
 There is also `skeleton/` — an experimental, article-independent schema for
 representing a text's reasoning structure (**[skeleton/SCHEMA.md](skeleton/SCHEMA.md)**),
-with this essay as its first validation corpus. It is not consumed by the
-HTML build.
+with this essay as its first validation corpus. The HTML build consumes it:
+`bin/skeleton_view.py` renders `skeleton/skeleton.yaml` (parsed by
+`skeleton/yamlsubset.py`, shared with `validate.py`) into the page's
+"érvváz" reading aid — hidden behind a toggle, off by default; build with
+`--no-skeleton` to omit it entirely.
 
 ## Link statuses (links.json)
 
