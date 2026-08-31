@@ -1,10 +1,23 @@
 #!/usr/bin/env python3
-"""Turn skeleton/skeleton.yaml into the "erwaz" (argument-skeleton) reading aid.
+"""Turn skeleton/skeleton.yaml into the "ervvaz" (argument-skeleton) reading aid.
 
-Everything derivable is derived here, in Python, at build time. The browser
-gets pre-ordered rows, pre-computed chunk adjacency and a small JSON blob; the
-page JS only moves things around and highlights text. Nothing about the
-skeleton is recomputed in the browser.
+Everything derivable is derived here, in Python, at build time. The browser gets
+pre-computed SVG geometry, pre-ordered rows and a small JSON blob; the page JS
+only swaps class strings, moves the viewport around and highlights text. Nothing
+about the skeleton's shape is recomputed in the browser.
+
+The aid has exactly two visual components (v2 - structure is visible as a graph):
+
+  1. The CHAPTER MINIMAP, a reading-order arc diagram with a lifted roof. One
+     static geometry, rendered 17 times: once as a viewpoint-less overview at the
+     top of the page, then once before ("pre") and once after ("post") each of
+     the 8 physical sections. Only the class strings differ between instances -
+     position IS the type, so the reader learns one picture and then only reads
+     its ink.
+  2. The CHAPTER DETAIL, a lane-based argument graph of one chunk's local
+     in-tree. Lanes are depth; the marker vocabulary is the claim's status and
+     the stroke vocabulary is the edge's role. Below 700px the v1 nested list is
+     kept as the fallback, because lanes need horizontal room to mean anything.
 
 Vocabulary
   chunk    a unit of the argument map. Usually one physical section, but
@@ -13,10 +26,14 @@ Vocabulary
            2 = a supporting claim inside a chunk.
   local    an edge whose two endpoints sit in the same chunk (and neither is
            the thesis). Local edges form a rooted in-tree at the key claim.
-  cross    everything else; surfaced as chunk chips, never as tree rows.
+  cross    everything else; the minimap's arcs, fan and carries.
+  rail     the eight chunks 01..07 (06 counts twice), in reading order.
+  roof     chunk 00, the descriptive backbone; an in-degree-8 sink.
 
-Reader-facing strings are Hungarian on purpose (the page chrome is Hungarian);
-node labels stay in the mapper's English.
+Page chrome is Hungarian. Node labels exist in both languages: the skeleton
+carries the mapper's English, skeleton/labels.hu.yaml is the thin Hungarian
+overlay (SCHEMA.md, "Localization overlay"). Anchors are English-only by
+construction - they are verbatim quotes of the original.
 """
 
 import html
@@ -32,19 +49,22 @@ sys.path.insert(0, os.path.join(_REPO, "skeleton"))
 from yamlsubset import ParseError, load  # noqa: E402
 
 SKELETON_PATH = os.path.join(_REPO, "skeleton", "skeleton.yaml")
+LABELS_HU_PATH = os.path.join(_REPO, "skeleton", "labels.hu.yaml")
 
-# The Toulmin "warrant on the arrow" view - drawing an interpolated warrant as
-# a label on the edge it licenses instead of as a row of its own - was
-# considered and deliberately not implemented: it needs a second visual grammar
-# for four nodes out of seventy-nine. The eligibility predicate is kept so the
-# decision can be revisited without re-deriving it.
-WARRANT_ON_ARROW = False
+# Local edge types, in the order the row encoding treats them. `presupposes` is
+# absent on purpose: every presupposes edge in the map is cross-chunk.
+LOCAL_EDGE_TYPES = ("supports", "elaborates", "qualifies", "rebuts")
 
-# Local edge types, in the order the row encoding treats them. `presupposes`
-# is absent on purpose: every presupposes edge in the map is cross-chunk.
-ROW_GLYPHS = {"supports": "", "elaborates": "+", "qualifies": "±", "rebuts": "✕"}
+# v1 carried a WARRANT_ON_ARROW eligibility predicate for the Toulmin picture -
+# an interpolated warrant drawn as a label on the arrow it licenses instead of
+# as a node of its own. It is gone: SCHEMA.md ("The bridge, at three
+# explicitness levels") already settles that this picture is a DERIVED VIEW and
+# never the stored shape, so a dormant predicate here only duplicated a decision
+# that lives there. The lane view draws warrants as ordinary rows with a hollow
+# dashed diamond, which says the same thing in the one visual grammar the rest
+# of the graph already uses.
 
-# One sentence per argumentation scheme, shown in the hover card.
+# One sentence per argumentation scheme, shown in the gloss card.
 SCHEME_LABELS = {
     "analogy": "analógia",
     "authority": "tekintély",
@@ -59,7 +79,30 @@ SCHEME_GLOSSES = {
                   "valószínű és a tét nagy, jut oda, hogy már most tenni kell valamit.",
 }
 
-MAX_CHUNK_CHIPS = 3
+# The is->ought sentence, kept from v1: it is the one thing the thesis capsule
+# has to say that the picture cannot.
+THESIS_NOTE = ("A leíró gerinctől egyetlen lépés vezet a normatív tézisig — "
+               "és ez a lépés nem bizonyítás.")
+
+# The only strings that follow the label language rather than the page chrome:
+# they sit inside the diagram, next to labels, and a Hungarian caption over an
+# English label reads as a bug.
+UI_STRINGS = {
+    "hu": {
+        "thesis-cap": "TÉZIS",
+        "pre": "mire épül",
+        "post": "mit adott hozzá",
+        "overview": "a gondolatmenet váza",
+        "graphtag": "AZ ÉRVELÉS ÁBRÁJA",
+    },
+    "en": {
+        "thesis-cap": "THESIS",
+        "pre": "what it builds on",
+        "post": "what it added",
+        "overview": "the shape of the argument",
+        "graphtag": "THE ARGUMENT, DRAWN",
+    },
+}
 
 _TAG_RE = re.compile(r"<[^>]*>")
 _WS_RE = re.compile(r"\s+")
@@ -78,7 +121,11 @@ def _tidy(text):
 
 
 def shorten(text, limit=118):
-    """Trim to a word boundary. Used for every 'compact restatement'."""
+    """Trim to a word boundary. Used for every 'compact restatement'.
+
+    Mirrored by shorten() in the page JS, which has to redo this after a
+    language switch; keep the two in step.
+    """
     text = _tidy(text)
     if len(text) <= limit:
         return text
@@ -99,9 +146,41 @@ def _esc(text):
     return html.escape(_tidy(text))
 
 
+def _n(value):
+    """Round a geometry number for the SVG output (bytes matter: 17 copies)."""
+    return ("%.1f" % value).rstrip("0").rstrip(".")
+
+
 def phys_section(chunk):
     """Physical section id of a chunk: "06a" -> "06"."""
     return chunk[:2]
+
+
+# --------------------------------------------------------------------------
+# minimap geometry, in user units of the 760x168 viewBox
+# --------------------------------------------------------------------------
+
+VB_W, VB_H = 760, 168
+CELL_W, CELL_H, PITCH, CELL_X0 = 62, 24, 98, 6
+RAIL_T, RAIL_B = 102, 126
+ROOF_T, ROOF_B, ROOF_X, ROOF_W = 52, 76, 6, 748
+CAP_T, CAP_H, CAP_W = 4, 24, 72
+GLYPH_Y, GLYPH_R = 89, 7
+BAR_Y, BAR_W = 123, 54
+ARC_DEPTH_BASE, ARC_DEPTH_SPAN = 6.0, 4.4
+HIT_H = 44  # every node's invisible hit rect is at least 44 units tall
+
+
+def _cell_cx(i):
+    return CELL_X0 + PITCH * i + CELL_W / 2.0
+
+
+# The detail view's lane model. Lane 0 sits at LANE_X0; a bypass edge (a second
+# parent) runs in its own lane to the LEFT of lane 0, so it never collides with
+# the tree.
+LANE_X0, LANE_PITCH, BYPASS_X = 30, 26, 10
+MARK_Y, HEAD_H = 14, 40
+THUMB_W, THUMB_PITCH, THUMB_LANE, THUMB_PAD = 124, 6, 9, 6
 
 
 # --------------------------------------------------------------------------
@@ -109,7 +188,7 @@ def phys_section(chunk):
 # --------------------------------------------------------------------------
 
 class SkeletonView(object):
-    def __init__(self, doc, section_index):
+    def __init__(self, doc, labels_hu, section_index):
         """section_index: physical section id -> index of the rendered section."""
         self.section_index = section_index
         text = doc.get("text") or {}
@@ -129,6 +208,9 @@ class SkeletonView(object):
             self.order[nid] = pos
         self.edges = edges
 
+        self.label_en = {nid: _tidy(n.get("label")) for nid, n in self.by_id.items()}
+        self.label_hu = self._check_labels(labels_hu)
+
         level0 = [n for n in nodes if n.get("level") == 0]
         if len(level0) != 1:
             raise SkeletonError("expected exactly one level-0 thesis node")
@@ -147,7 +229,39 @@ class SkeletonView(object):
                 raise SkeletonError("chunk %r has no rendered section %r"
                                     % (chunk, phys_section(chunk)))
 
+        self.rank = {c: i for i, c in enumerate(self.chunks)}
+        self.roof = self.chunks[0]
+        self.rail = self.chunks[1:]
+        if len(self.rail) != 8:
+            raise SkeletonError("the minimap rail expects 8 chunks, got %d"
+                                % len(self.rail))
+
         self._derive()
+        self._derive_minimap()
+        self._derive_lanes()
+
+    # ---- labels ---------------------------------------------------------
+
+    def _check_labels(self, labels_hu):
+        """The overlay must cover exactly the skeleton's node ids - no more, no
+        fewer. A silently partial overlay would show a mixed-language graph."""
+        if not isinstance(labels_hu, dict):
+            raise SkeletonError("labels.hu.yaml has no top-level `labels:` mapping")
+        have, want = set(labels_hu), set(self.by_id)
+        extra, gone = sorted(have - want), sorted(want - have)
+        if extra or gone:
+            parts = []
+            if gone:
+                parts.append("missing %d: %s" % (len(gone), ", ".join(gone[:6])
+                                                 + ("…" if len(gone) > 6 else "")))
+            if extra:
+                parts.append("unknown %d: %s" % (len(extra), ", ".join(extra[:6])
+                                                 + ("…" if len(extra) > 6 else "")))
+            raise SkeletonError(
+                "skeleton/labels.hu.yaml must carry exactly the %d skeleton node "
+                "ids (%s). Re-translate the changed `label:` fields, or build "
+                "without the reading aid." % (len(want), "; ".join(parts)))
+        return {nid: _tidy(labels_hu[nid]) for nid in want}
 
     # ---- derivations ---------------------------------------------------
 
@@ -156,7 +270,7 @@ class SkeletonView(object):
 
     def _derive(self):
         thesis_id = self.thesis["id"]
-        rank = {c: i for i, c in enumerate(self.chunks)}
+        rank = self.rank
 
         local_out = {}   # node -> [(target, type, scheme)] within its own chunk
         cross = []       # (src, dst, type, scheme)
@@ -166,24 +280,23 @@ class SkeletonView(object):
             if src not in self.by_id or dst not in self.by_id:
                 raise SkeletonError("edge references an unknown node: %s -> %s" % (src, dst))
             if dst == thesis_id or src == thesis_id:
-                continue  # the is->ought step lives on the thesis card
+                continue  # the is->ought step lives on the thesis capsule
             if self._chunk_of(src) == self._chunk_of(dst):
                 local_out.setdefault(src, []).append((dst, etype, scheme))
             else:
                 cross.append((src, dst, etype, scheme))
         self.cross_edges = cross
+        self.backbone_id = self.key_of[self.roof]["id"]
 
-        # Chunk dependency: X depends on Y when X presupposes something in Y,
-        # or when Y's material supports a claim of X. Supports into the
-        # descriptive backbone (s00-key) are excluded - every chunk feeds it,
-        # so listing it would say nothing.
-        backbone = self.key_of[self.chunks[0]]["id"]
+        # Chunk dependency: X depends on Y when X presupposes something in Y, or
+        # when Y's material supports a claim of X. Supports into the descriptive
+        # backbone are excluded - every chunk feeds it, so listing it says nothing.
         depends = {c: [] for c in self.chunks}
         for src, dst, etype, _scheme in cross:
             csrc, cdst = self._chunk_of(src), self._chunk_of(dst)
             if etype == "presupposes":
                 dep, base = csrc, cdst
-            elif etype == "supports" and dst != backbone:
+            elif etype == "supports" and dst != self.backbone_id:
                 dep, base = cdst, csrc
             else:
                 continue
@@ -201,21 +314,23 @@ class SkeletonView(object):
         # Local in-trees, one per chunk.
         self.rows = {}
         self.d1 = {}
-        self.also_nodes = {}
+        self.interp_count = {}
         for chunk in self.chunks:
             key = self.key_of[chunk]["id"]
             members = [n["id"] for n in self.by_id.values()
                        if n.get("section") == chunk and n.get("level") == 2]
             self.d1[chunk] = len(members)
+            self.interp_count[chunk] = sum(
+                1 for m in members if self.by_id[m].get("interpolated") is True)
 
             children = {}  # parent -> [child ids]
             for nid in members:
                 for dst, _t, _s in local_out.get(nid, []):
                     children.setdefault(dst, []).append(nid)
 
-            # Distance to the key over local edges; the primary parent of a
-            # node is the parent that sits closest to the key, so the extra
-            # edge of an out-degree-2 node becomes an "also" chip.
+            # Distance to the key over local edges; the primary parent of a node
+            # is the parent that sits closest to the key, so the extra edge of an
+            # out-degree-2 node becomes the drawn bypass.
             dist = {key: 0}
             frontier = [key]
             while frontier:
@@ -227,8 +342,7 @@ class SkeletonView(object):
                             nxt.append(child)
                 frontier = nxt
 
-            primary = {}
-            extras = {}
+            primary, extras = {}, {}
             for nid in members:
                 outs = local_out.get(nid, [])
                 if not outs:
@@ -237,8 +351,6 @@ class SkeletonView(object):
                 primary[nid] = ranked[0]
                 if len(ranked) > 1:
                     extras[nid] = ranked[1:]
-                    for dst, _t, _s in ranked[1:]:
-                        self.also_nodes[dst] = self.by_id[dst]
 
             tree = {}
             for nid, (dst, etype, scheme) in primary.items():
@@ -269,9 +381,8 @@ class SkeletonView(object):
             if edge.get("to") == thesis_id:
                 self.thesis_edge = edge
                 break
-        self.backbone_id = backbone
 
-        # Anchors, flattened for the build-time verifier.
+        # Anchors, flattened for the build-time verifier and the page JS.
         self.anchor_index = {}
         for node in self.by_id.values():
             entries = []
@@ -289,21 +400,172 @@ class SkeletonView(object):
             if entries:
                 self.anchor_index[node["id"]] = entries
 
-    # ---- warrant-on-arrow eligibility (kept, not used) ------------------
+    def footnote_only(self, nid):
+        """D3: every anchor of this node sits below the line. Derived, never stored."""
+        anchors = self.anchor_index.get(nid, [])
+        return bool(anchors) and all(a["fn"] is not None for a in anchors)
 
-    def warrant_on_arrow_eligible(self, node):
-        """True when a node could be drawn as a label on the edge it licenses.
+    # ---- minimap geometry ------------------------------------------------
 
-        Requires an interpolated warrant with exactly one outgoing local edge
-        and at least one incoming one, so the arrow it would ride is unique.
+    def _derive_minimap(self):
+        """Compute the one static geometry the 17 instances all share."""
+        rank, rail = self.rank, self.rail
+        idx = {c: i for i, c in enumerate(rail)}
+        self.rail_index = idx
+
+        # Fan: every rail chunk's key claim supports the roof's key claim.
+        fan = {}
+        for src, dst, etype, scheme in self.cross_edges:
+            if dst == self.backbone_id and etype == "supports":
+                fan[self._chunk_of(src)] = scheme
+        missing = [c for c in rail if c not in fan]
+        if missing:
+            raise SkeletonError("rail chunks with no support into the backbone: %s"
+                                % ", ".join(missing))
+        self.fan = fan
+
+        # Arcs: backward `presupposes`, collapsed to chunk pairs. Multiplicity is
+        # the number of node-level edges behind the chunk-level arc; an arc that
+        # only ever lands on sub-claims gets a hollow head (a deep link, not a
+        # dependency on the chapter's headline claim).
+        arcs = {}
+        for src, dst, etype, _scheme in self.cross_edges:
+            if etype != "presupposes":
+                continue
+            a, b = self._chunk_of(src), self._chunk_of(dst)
+            if rank[a] <= rank[b]:
+                raise SkeletonError("forward presupposes edge %s -> %s" % (src, dst))
+            key = "%s>%s" % (a, b)
+            rec = arcs.setdefault(key, {"a": a, "b": b, "edges": [], "deep": True})
+            rec["edges"].append([src, dst])
+            if self.by_id[dst].get("level") == 1:
+                rec["deep"] = False
+
+        # Forward cross-chunk supports: the two carries that reading order makes
+        # but no arc can show (an arc band holds backward edges only).
+        carries = []
+        for src, dst, etype, _scheme in self.cross_edges:
+            a, b = self._chunk_of(src), self._chunk_of(dst)
+            if rank[a] < rank[b] and dst != self.backbone_id:
+                carries.append({"a": a, "b": b, "edges": [[src, dst]]})
+
+        # Attachment spreading: several arcs meet at one cell, so their endpoints
+        # fan out across the cell's width instead of stacking into one blob.
+        att = {c: [] for c in rail}
+        for key in sorted(arcs, key=lambda k: (idx[arcs[k]["a"]], idx[arcs[k]["b"]])):
+            rec = arcs[key]
+            att[rec["a"]].append((idx[rec["b"]], key, "tail"))
+            att[rec["b"]].append((idx[rec["a"]], key, "head"))
+        slot = {}
+        for chunk, items in att.items():
+            items.sort()
+            n = len(items)
+            step = 0 if n < 2 else min(9.0, 44.0 / (n - 1))
+            for k, (_partner, key, role) in enumerate(items):
+                slot[(key, role)] = _cell_cx(idx[chunk]) + (k - (n - 1) / 2.0) * step
+
+        self.arcs = []
+        for key in sorted(arcs, key=lambda k: (idx[arcs[k]["b"]], idx[arcs[k]["a"]])):
+            rec = arcs[key]
+            span = idx[rec["a"]] - idx[rec["b"]]
+            depth = ARC_DEPTH_BASE + ARC_DEPTH_SPAN * span
+            x1, x2 = slot[(key, "tail")], slot[(key, "head")]
+            self.arcs.append({
+                "key": key, "a": rec["a"], "b": rec["b"],
+                "n": len(rec["edges"]), "edges": rec["edges"], "deep": rec["deep"],
+                "d": "M%s %d Q%s %s %s %d" % (_n(x1), RAIL_B, _n((x1 + x2) / 2.0),
+                                              _n(RAIL_B + 2 * depth), _n(x2), RAIL_B),
+                "hx": x2,  # the earlier end: where the arrowhead sits
+            })
+        self.carries = []
+        for rec in carries:
+            ia, ib = idx[rec["a"]], idx[rec["b"]]
+            gap_l = CELL_X0 + PITCH * min(ia, ib) + CELL_W
+            gap_r = CELL_X0 + PITCH * max(ia, ib)
+            rec["x"] = (gap_l + gap_r) / 2.0
+            self.carries.append(rec)
+
+        # Load bars: solid length is the chunk's D1 count, the dashed tail is the
+        # part of that load the text never states (D2).
+        top = max(self.d1[c] for c in rail)
+        self.bars = {}
+        for chunk in rail:
+            total = BAR_W * self.d1[chunk] / float(top)
+            interp = self.interp_count[chunk]
+            dash = 0.0 if not interp else max(6.0, BAR_W * interp / float(top))
+            self.bars[chunk] = (max(0.0, total - dash), dash)
+
+        self.cap_cx = _cell_cx(len(rail) - 1)
+
+    # ---- lane model for the detail view ----------------------------------
+
+    def _derive_lanes(self):
+        """Per chunk: row depth, parent, sibling continuation lanes, bypass edges.
+
+        The row geometry has to survive labels of unknown height, so it is split:
+        the verticals are plain full-height CSS divs (trivial), and only the
+        elbow/marker/arrowhead head - which is text-line-height dependent and
+        therefore fixed at HEAD_H - is an SVG.
         """
-        if not WARRANT_ON_ARROW:
-            return False
-        if node.get("interpolated") is not True or node.get("kind") != "warrant":
-            return False
-        outs = [e for e in self.edges if e.get("from") == node["id"]]
-        ins = [e for e in self.edges if e.get("to") == node["id"]]
-        return len(outs) == 1 and len(ins) >= 1
+        self.lanes = {}
+        for chunk in self.chunks:
+            rows = self.rows[chunk]
+            index_of = {r["id"]: i for i, r in enumerate(rows)}
+            maxdepth = max(r["depth"] for r in rows)
+
+            parent = [None] * len(rows)
+            stack = {}
+            for i, row in enumerate(rows):
+                stack[row["depth"]] = i
+                if row["depth"] > 0:
+                    parent[i] = stack[row["depth"] - 1]
+
+            kids = {}
+            for i, p in enumerate(parent):
+                if p is not None:
+                    kids.setdefault(p, []).append(i)
+            last = [True] * len(rows)
+            for p, group in kids.items():
+                for i in group[:-1]:
+                    last[i] = False
+
+            # bypass: the second parent of an out-degree-2 node, drawn as a real
+            # edge in its own lane rather than as a chip of prose.
+            bypass_role = [None] * len(rows)
+            bypasses = []
+            for i, row in enumerate(rows):
+                for dst, etype, scheme in row["extras"]:
+                    j = index_of[dst]
+                    bypasses.append({"src": i, "dst": j, "etype": etype,
+                                     "scheme": scheme, "down": j > i})
+            for bp in bypasses:
+                lo, hi = min(bp["src"], bp["dst"]), max(bp["src"], bp["dst"])
+                bypass_role[bp["src"]] = ("start-down" if bp["down"] else "start-up")
+                bypass_role[bp["dst"]] = ("end-down" if bp["down"] else "end-up")
+                for m in range(lo + 1, hi):
+                    if bypass_role[m] is None:
+                        bypass_role[m] = "mid"
+
+            cont = {}
+            meta = []
+            for i, row in enumerate(rows):
+                d = row["depth"]
+                cont[d] = not last[i]
+                verticals = [LANE_X0 + LANE_PITCH * (a - 1)
+                             for a in range(1, d) if cont.get(a)]
+                if d and cont[d]:
+                    verticals.append(LANE_X0 + LANE_PITCH * (d - 1))
+                meta.append({
+                    "row": row, "i": i, "depth": d, "parent": parent[i],
+                    "last": last[i], "verticals": verticals,
+                    "bypass": bypass_role[i],
+                    "x": LANE_X0 + LANE_PITCH * d,
+                })
+            self.lanes[chunk] = {
+                "meta": meta, "maxdepth": maxdepth,
+                "gutter": 28 + LANE_PITCH * maxdepth + 12,
+                "bypasses": bypasses,
+            }
 
     # ---- anchor verification -------------------------------------------
 
@@ -330,163 +592,429 @@ class SkeletonView(object):
                                     % (nid, pos, si, hits, shorten(entry["q"], 70)))
         return total, failures
 
-    # ---- rendering ------------------------------------------------------
+    # ======================================================================
+    # component 1: the chapter minimap
+    # ======================================================================
 
-    def _chunk_chips(self, chunk_ids, role):
-        """Inner HTML of a chunk-chip run; the caller owns the .skel-chips row."""
-        if not chunk_ids:
+    def _states(self, view):
+        """Node and edge ink for one viewpoint. Geometry never changes; only ink.
+
+        `view` is the set of chunks the instance stands in (section 06 stands in
+        both of its virtual chunks), or empty for the viewpoint-less overview.
+        """
+        if not view:
+            return {}, {}
+        vrank = min(self.rank[c] for c in view)
+        deps, uses = set(), set()
+        for c in view:
+            deps.update(self.builds_on.get(c, []))
+            uses.update(self.used_by.get(c, []))
+        deps -= view
+        uses -= view
+
+        nodes = {}
+        for chunk in self.chunks:
+            if chunk in view:
+                nodes[chunk] = "self"
+            elif chunk in deps:
+                nodes[chunk] = "dep"
+            elif chunk in uses:
+                nodes[chunk] = "used"
+            elif self.rank[chunk] < vrank:
+                nodes[chunk] = "past"
+            else:
+                nodes[chunk] = "ahead"
+        # Every rail chunk supports the roof, so from a rail viewpoint the roof
+        # is always "used". From the roof's own viewpoint the rail is genuinely
+        # unread, so it stays "ahead" - the reading-progress signal wins over the
+        # (true but useless) statement that all eight feed it.
+        if self.roof not in view:
+            nodes[self.roof] = "used"
+        return nodes, {"vrank": vrank, "view": view}
+
+    def _edge_state(self, later, earlier, ctx):
+        if not ctx:
             return ""
-        shown, rest = chunk_ids[:MAX_CHUNK_CHIPS], chunk_ids[MAX_CHUNK_CHIPS:]
-        chips = ['<span class="skel-role">%s</span>' % _esc(role)]
-        for cid in shown:
-            chips.append('<button type="button" class="skel-chip skel-chunk" '
-                         'data-skel-peek="%s">%s</button>' % (_esc(cid), _esc(cid)))
-        if rest:
-            chips.append('<span class="skel-chip skel-more">+%d</span>' % len(rest))
-        return "".join(chips)
+        if later in ctx["view"] or earlier in ctx["view"]:
+            return " sk-live"
+        return " sk-epast" if self.rank[later] < ctx["vrank"] else " sk-eahead"
 
-    def _chips_row(self, inner):
-        return ('<div class="skel-chips">%s</div>' % inner) if inner else ""
+    def minimap_html(self, view, phase, delivered):
+        """One instance of the map. `view` is a set of chunks (possibly empty),
+        `phase` is "ov" | "pre" | "post", `delivered` counts read sections (0..8).
+        """
+        node_state, ctx = self._states(view)
+        st = lambda c: (" sk-" + node_state[c]) if node_state else ""  # noqa: E731
+        out = ["<svg class=\"skel-map sk-%s\" viewBox=\"0 0 %d %d\" "
+               "preserveAspectRatio=\"xMidYMid meet\" role=\"img\" "
+               "aria-hidden=\"true\" focusable=\"false\">" % (phase, VB_W, VB_H)]
+        add = out.append
 
-    def _gloss_chip(self, scheme):
-        if scheme not in SCHEME_LABELS:
-            return ""
-        return ('<button type="button" class="skel-chip skel-gloss" '
-                'data-skel-gloss="%s">%s</button>'
-                % (_esc(scheme), _esc(SCHEME_LABELS[scheme])))
+        # --- arc band (drawn first so the rail sits on top of it) ---
+        add('<g class="sk-arcs">')
+        for arc in self.arcs:
+            live = self._edge_state(arc["a"], arc["b"], ctx)
+            width = {1: "1", 2: "1.6"}.get(arc["n"], "2.2")
+            head = "sk-head sk-hollow" if arc["deep"] else "sk-head"
+            add('<g class="sk-arc%s" data-arc="%s">'
+                '<path class="sk-arcline" d="%s" stroke-width="%s"/>'
+                '<path class="sk-hit-e" d="%s"/>'
+                '<path class="%s" d="M%s 127 L%s 133 L%s 133 Z"/></g>'
+                % (live, arc["key"], arc["d"], width, arc["d"], head,
+                   _n(arc["hx"]), _n(arc["hx"] - 2.8), _n(arc["hx"] + 2.8)))
+        add("</g>")
 
-    def thesis_html(self):
-        backbone = self.by_id[self.backbone_id]
-        scheme = (self.thesis_edge or {}).get("scheme")
+        # --- fan gap: eight vertical supports, rail -> roof ---
+        add('<g class="sk-fans">')
+        for chunk in self.rail:
+            cx = _cell_cx(self.rail_index[chunk])
+            live = self._edge_state(chunk, self.roof, ctx)
+            add('<g class="sk-fan%s" data-fan="%s">'
+                '<path class="sk-fanline" d="M%s %d L%s %d"/>'
+                '<path class="sk-hit-e" d="M%s %d L%s %d"/>'
+                '<path class="sk-head" d="M%s %d L%s %d L%s %d Z"/></g>'
+                % (live, chunk, _n(cx), RAIL_T, _n(cx), ROOF_B,
+                   _n(cx), RAIL_T, _n(cx), ROOF_B,
+                   _n(cx), ROOF_B, _n(cx - 3.6), ROOF_B + 7, _n(cx + 3.6), ROOF_B + 7))
+        add("</g>")
+
+        # --- scheme glyphs on the fan ---
+        add('<g class="sk-glyphs">')
+        for chunk in self.rail:
+            scheme = self.fan.get(chunk)
+            if not scheme:
+                continue
+            cx = _cell_cx(self.rail_index[chunk])
+            live = self._edge_state(chunk, self.roof, ctx)
+            add('<g class="sk-gl%s"><circle class="sk-gl-c" cx="%s" cy="%d" r="%d"/>'
+                '<text class="sk-gl-t" x="%s" y="%s">≈</text>'
+                '<rect class="sk-hit sk-glyphhit skel-keep" x="%s" y="%s" width="44" '
+                'height="44" data-skel-gloss="%s"/></g>'
+                % (live, _n(cx), GLYPH_Y, GLYPH_R, _n(cx), _n(GLYPH_Y + 3.6),
+                   _n(cx - 22), _n(GLYPH_Y - 22), _esc(scheme)))
+        add("</g>")
+
+        # --- forward carries ---
+        for carry in self.carries:
+            live = self._edge_state(carry["b"], carry["a"], ctx)
+            x = carry["x"]
+            add('<path class="sk-chev%s" d="M%s 110 L%s 114 L%s 118 Z"/>'
+                % (live, _n(x - 3), _n(x + 4), _n(x - 3)))
+
+        # --- roof plate (chunk 00) ---
+        prog = ROOF_W * delivered / 8.0
+        add('<g class="sk-node sk-roofg%s" data-node="%s">'
+            '<rect class="sk-roof" x="%d" y="%d" width="%d" height="%d" rx="5"/>'
+            '<rect class="sk-prog" x="%d" y="%d" width="%s" height="%d" rx="5"/>'
+            '<text class="sk-id sk-roofid" x="%s" y="%s">%s</text>'
+            '<rect class="sk-hit skel-keep" x="%d" y="%s" width="%d" height="%d" '
+            'data-skel-node="%s"/></g>'
+            % (st(self.roof), _esc(self.roof),
+               ROOF_X, ROOF_T, ROOF_W, ROOF_B - ROOF_T,
+               ROOF_X, ROOF_T, _n(prog), ROOF_B - ROOF_T,
+               _n(ROOF_X + 14), _n(ROOF_T + 16), _esc(self.roof),
+               ROOF_X, _n((ROOF_T + ROOF_B) / 2.0 - HIT_H / 2.0), ROOF_W, HIT_H,
+               _esc(self.roof)))
+
+        # --- thesis capsule + precaution arrow ---
+        done = " sk-done" if (phase == "post" and self.rail[-1] in view) else ""
+        cap_state = "dep" if (self.roof in view or done) else "ahead"
+        cx = self.cap_cx
+        add('<g class="sk-prec%s%s">'
+            '<path class="sk-precline" d="M%s %d L%s %d"/>'
+            '<path class="sk-head" d="M%s %d L%s %d L%s %d Z"/>'
+            '<circle class="sk-gl-c" cx="%s" cy="40" r="%d"/>'
+            '<text class="sk-gl-t" x="%s" y="43.6">!</text>'
+            '<rect class="sk-hit sk-glyphhit skel-keep" x="%s" y="18" width="44" '
+            'height="44" data-skel-gloss="%s"/></g>'
+            % (done, self._edge_state(self.roof, self.roof, ctx) if ctx else "",
+               _n(cx), ROOF_T - 2, _n(cx), CAP_T + CAP_H + 8,
+               _n(cx), CAP_T + CAP_H + 1, _n(cx - 3.6), CAP_T + CAP_H + 8,
+               _n(cx + 3.6), CAP_T + CAP_H + 8,
+               _n(cx - 23), GLYPH_R, _n(cx - 23), _n(cx - 45),
+               _esc((self.thesis_edge or {}).get("scheme") or "precaution")))
+        add('<g class="sk-node sk-capg sk-%s" data-node="thesis">'
+            '<rect class="sk-cap" x="%s" y="%d" width="%d" height="%d" rx="12"/>'
+            '<text class="sk-captext" x="%s" y="%s" data-i18n="thesis-cap">%s</text>'
+            '<rect class="sk-hit skel-keep" x="%s" y="%s" width="%d" height="%d" '
+            'data-skel-node="thesis"/></g>'
+            % (cap_state, _n(cx - CAP_W / 2.0), CAP_T, CAP_W, CAP_H,
+               _n(cx), _n(CAP_T + CAP_H / 2.0 + 3.6),
+               _esc(UI_STRINGS["hu"]["thesis-cap"]),
+               _n(cx - CAP_W / 2.0), _n(CAP_T + CAP_H / 2.0 - HIT_H / 2.0),
+               CAP_W, HIT_H, ))
+
+        # --- rail ---
+        for chunk in self.rail:
+            i = self.rail_index[chunk]
+            x, cx = CELL_X0 + PITCH * i, _cell_cx(i)
+            solid, dash = self.bars[chunk]
+            bar = ('<path class="sk-bar" d="M%s %d L%s %d"/>'
+                   % (_n(cx - BAR_W / 2.0), BAR_Y, _n(cx - BAR_W / 2.0 + solid), BAR_Y))
+            if dash:
+                bar += ('<path class="sk-bar sk-bard" d="M%s %d L%s %d"/>'
+                        % (_n(cx - BAR_W / 2.0 + solid), BAR_Y,
+                           _n(cx - BAR_W / 2.0 + solid + dash), BAR_Y))
+            add('<g class="sk-node%s" data-node="%s">'
+                '<rect class="sk-cell" x="%d" y="%d" width="%d" height="%d" rx="4"/>'
+                '%s<text class="sk-id" x="%s" y="%s">%s</text>'
+                '<rect class="sk-hit skel-keep" x="%d" y="%s" width="%d" height="%d" '
+                'data-skel-node="%s"/></g>'
+                % (st(chunk), _esc(chunk), x, RAIL_T, CELL_W, CELL_H, bar,
+                   _n(cx), _n(RAIL_T + 14), _esc(chunk),
+                   x, _n((RAIL_T + RAIL_B) / 2.0 - HIT_H / 2.0), CELL_W, HIT_H,
+                   _esc(chunk)))
+
+        add("</svg>")
+        return "".join(out)
+
+    def _map_block(self, view, phase, delivered, caption_num, caption_key, extra=""):
         return (
-            '<div class="skel-thesis" data-skel-block hidden>'
-            '<div class="skel-tag">A teljes érv</div>'
-            '<p class="skel-thesis-claim">%s</p>'
-            '<p class="skel-thesis-line">'
-            '<span class="skel-thesis-step">%s</span>'
-            '<span class="skel-arrow">→</span>%s<span class="skel-arrow">→</span>'
-            '<span class="skel-thesis-step">%s</span></p>'
-            '<p class="skel-thesis-note">A leíró gerinctől egyetlen lépés vezet a '
-            'normatív tézisig — és ez a lépés nem bizonyítás.</p>'
-            '</div>'
-            % (_esc(self.thesis["label"]),
-               _esc(shorten(backbone["label"], 96)),
-               self._gloss_chip(scheme),
-               _esc(shorten(self.thesis["label"], 76)))
-        )
+            '<div class="skel-mapwrap" data-view="%s" data-phase="%s">%s'
+            '<div class="skel-cap"><span class="skel-cap-num">%s</span>'
+            '<span class="skel-cap-txt" data-i18n="%s">%s</span>%s</div></div>'
+            % (_esc(" ".join(sorted(view))), phase,
+               self.minimap_html(view, phase, delivered),
+               _esc(caption_num), caption_key,
+               _esc(UI_STRINGS["hu"][caption_key]), extra))
 
-    def legend_html(self):
-        interp = sum(1 for n in self.by_id.values() if n.get("interpolated") is True)
-        return (
-            '<div class="skel-legend" id="skel-legend" data-skel-block hidden>'
-            '<button type="button" class="skel-legend-x" id="skel-legend-x" '
-            'aria-label="Bezárás" title="Bezárás">×</button>'
-            '<ul>'
-            '<li>Minden szakasz előtt egy doboz mondja meg, mi az adott '
-            'gondolategység kulcsállítása és mire épül; a szakasz után '
-            'lenyitható, miből áll.</li>'
-            '<li><span class="skel-legend-interp">Szaggatott, dőlt sor</span> = a '
-            'térkép %d állításából %d-et a feltérképezés adott hozzá — a '
-            'szöveg ezeket nem mondja ki.</li>'
-            '<li>A címkék egyelőre angolul vannak, mint az eredeti szöveg.</li>'
-            '<li><span class="skel-legend-q">❝</span> = ugrás a pontos mondatra '
-            'az angol szövegben.</li>'
-            '</ul></div>'
-            % (len(self.by_id), interp)
-        )
+    def overview_html(self):
+        legend_btn = ('<button type="button" class="skel-dbtn skel-keep" '
+                      'data-skel-legend>mit jelentenek a jelek?</button>')
+        return ('<div class="skel-overview" id="skel-overview" data-skel-block hidden>'
+                '%s</div>'
+                % self._map_block(set(), "ov", 0, "00–07", "overview", legend_btn))
 
-    def close_html(self):
-        return (
-            '<div class="skel-close" data-skel-block hidden>'
-            '<div class="skel-tag">Ide tartott az érvelés</div>'
-            '<p>%s</p></div>' % _esc(self.thesis["label"])
-        )
+    # ======================================================================
+    # page blocks
+    # ======================================================================
+
+    def _view_of(self, phys):
+        return {c for c in self.chunks if phys_section(c) == phys}
 
     def pre_html(self, phys):
         """The advance organizer that precedes one physical section."""
-        chunks = [c for c in self.chunks if phys_section(c) == phys]
-        if not chunks:
+        view = self._view_of(phys)
+        if not view:
             return ""
-        head = "%s / %d" % (phys, len(self.chunks))
-        if len(chunks) > 1:
-            head += " · %d gondolategység" % len(chunks)
+        si = self.section_index[phys]
         blocks = []
-        for chunk in chunks:
-            key = self.key_of[chunk]
-            scheme = None
-            for src, dst, etype, sch in self.cross_edges:
-                if src == key["id"] and dst == self.backbone_id and sch:
-                    scheme = sch
-            chips = [self._chips_row(
-                self._chunk_chips(self.builds_on[chunk], "épül erre:")
-                + self._gloss_chip(scheme))]
-            blocks.append(
-                '<div class="skel-keyblock" data-skel-chunk="%s">'
-                '<button type="button" class="skel-dot" data-skel-goto="%s" '
-                'aria-label="Ugrás: %s gondolategység"></button>'
-                '%s<p class="skel-key">%s</p>%s</div>'
-                % (_esc(chunk), _esc(chunk), _esc(chunk),
-                   ('<div class="skel-sub">%s</div>' % _esc(chunk)) if len(chunks) > 1 else "",
-                   _esc(key["label"]), "".join(chips))
-            )
-        return (
-            '<div class="skel-pre" id="skel-pre-%s" data-skel-block data-skel-box="%s" hidden>'
-            '<div class="skel-pre-inner"><div class="skel-pre-head">%s</div>%s</div></div>'
-            % (_esc(phys), _esc(" ".join(chunks)), _esc(head), "".join(blocks))
-        )
+        for chunk in sorted(view, key=lambda c: self.rank[c]):
+            key = self.key_of[chunk]["id"]
+            sub = ('<div class="skel-sub">%s</div>' % _esc(chunk)) if len(view) > 1 else ""
+            blocks.append('<div class="skel-keyblock" data-skel-chunk="%s">%s'
+                          '<p class="skel-key" data-skel-label="%s">%s</p></div>'
+                          % (_esc(chunk), sub, _esc(key), _esc(self.label_hu[key])))
+        return ('<div class="skel-pre" id="skel-pre-%s" data-skel-block '
+                'data-skel-box="%s" hidden><div class="skel-pre-inner">%s%s</div></div>'
+                % (_esc(phys), _esc(" ".join(sorted(view))),
+                   self._map_block(view, "pre", si, phys, "pre"), "".join(blocks)))
 
-    def _row_html(self, chunk, row):
-        node = self.by_id[row["id"]]
+    def post_html(self, phys):
+        """The end-of-section consolidation: the close map, then one detail per chunk."""
+        view = self._view_of(phys)
+        if not view:
+            return ""
+        si = self.section_index[phys]
+        strips = [self._map_block(view, "post", si + 1, phys, "post")]
+        for chunk in sorted(view, key=lambda c: self.rank[c]):
+            strips.append(self._detail_block(chunk))
+        return ('<div class="skel-post" id="skel-post-%s" data-skel-block hidden>'
+                '<div class="skel-post-inner">%s</div></div>'
+                % (_esc(phys), "".join(strips)))
+
+    # ======================================================================
+    # component 2: the chapter detail (lane-based argument graph)
+    # ======================================================================
+
+    def _composition(self, chunk):
+        lane = self.lanes[chunk]
+        parts = ["%d állítás" % self.d1[chunk], "%d szint" % (lane["maxdepth"] + 1)]
+        if self.interp_count[chunk]:
+            parts.append("◇ %d kiegészítés" % self.interp_count[chunk])
+        return " · ".join(parts)
+
+    def _thumb_svg(self, chunk):
+        """A real thumbnail: the same lane model at 1/4 scale, not a decoration."""
+        meta = self.lanes[chunk]["meta"]
+        h = THUMB_PAD * 2 + THUMB_PITCH * (len(meta) - 1)
+        out = ['<svg class="skel-thumb" viewBox="0 0 %d %d" '
+               'preserveAspectRatio="xMinYMid meet" aria-hidden="true" '
+               'focusable="false">' % (THUMB_W, h)]
+
+        def px(m):
+            return THUMB_PAD + THUMB_LANE * m["depth"]
+
+        def py(m):
+            return THUMB_PAD + THUMB_PITCH * m["i"]
+
+        for m in meta:
+            if m["parent"] is None:
+                continue
+            p = meta[m["parent"]]
+            out.append('<path class="sk-tline" d="M%s %s L%s %s L%s %s"/>'
+                       % (_n(px(m)), _n(py(m)), _n(px(p)), _n(py(m)),
+                          _n(px(p)), _n(py(p))))
+        for bp in self.lanes[chunk]["bypasses"]:
+            s, d = meta[bp["src"]], meta[bp["dst"]]
+            out.append('<path class="sk-tline sk-tbypass" d="M%s %s L2 %s L2 %s L%s %s"/>'
+                       % (_n(px(s)), _n(py(s)), _n(py(s)), _n(py(d)), _n(px(d)), _n(py(d))))
+        for m in meta:
+            # the label column, as a rule: without it the thumbnail is a stack of
+            # dots in the left 30px and reads as decoration rather than as rows
+            out.append('<path class="sk-tlabel" d="M%s %s L%d %s"/>'
+                       % (_n(px(m) + 5), _n(py(m)), THUMB_W - 4, _n(py(m))))
+        for m in meta:
+            node = self.by_id[m["row"]["id"]]
+            if m["i"] == 0:
+                out.append('<circle class="sk-tkey" cx="%s" cy="%s" r="2.4"/>'
+                           % (_n(px(m)), _n(py(m))))
+            elif node.get("interpolated") is True:
+                out.append('<path class="sk-tinterp" d="M%s %s l2.4 2.4 l-2.4 2.4 '
+                           'l-2.4 -2.4 Z"/>' % (_n(px(m)), _n(py(m) - 2.4)))
+            else:
+                out.append('<circle class="sk-tdot" cx="%s" cy="%s" r="1.5"/>'
+                           % (_n(px(m)), _n(py(m))))
+        out.append("</svg>")
+        return "".join(out)
+
+    def _head_svg(self, chunk, m):
+        """The fixed-height head layer of one row: elbow, terminal, marker, diamond."""
+        gut = self.lanes[chunk]["gutter"]
+        node = self.by_id[m["row"]["id"]]
+        etype = m["row"]["etype"] or "supports"
+        x, d = m["x"], m["depth"]
+        out = ['<svg class="skel-lhead" viewBox="0 0 %d %d" width="%d" height="%d" '
+               'aria-hidden="true" focusable="false">' % (gut, HEAD_H, gut, HEAD_H)]
+
+        if d:
+            lane_x = LANE_X0 + LANE_PITCH * (d - 1)
+            out.append('<path class="sk-ed sk-ed-%s" d="M%s %d L%s %d L%s 6"/>'
+                       % (etype, _n(x), MARK_Y, _n(lane_x), MARK_Y, _n(lane_x)))
+            if etype == "rebuts":
+                # inhibitory-synapse idiom: a crossbar, not an arrowhead
+                out.append('<path class="sk-term sk-term-bar" d="M%s 5 L%s 5"/>'
+                           % (_n(lane_x - 4.5), _n(lane_x + 4.5)))
+            else:
+                out.append('<path class="sk-term sk-term-%s" d="M%s 3 L%s 8 L%s 8 Z"/>'
+                           % (etype, _n(lane_x), _n(lane_x - 2.5), _n(lane_x + 2.5)))
+
+        role = m["bypass"]
+        if role and role.startswith("start"):
+            out.append('<path class="sk-ed sk-ed-bypass" d="M%s %d L%d %d"/>'
+                       % (_n(x), MARK_Y, BYPASS_X, MARK_Y))
+        elif role and role.startswith("end"):
+            out.append('<path class="sk-ed sk-ed-bypass" d="M%d %d L%s %d"/>'
+                       % (BYPASS_X, MARK_Y, _n(x - 8), MARK_Y))
+            out.append('<path class="sk-term sk-term-supports" d="M%s %d L%s %s L%s %s Z"/>'
+                       % (_n(x - 7), MARK_Y, _n(x - 12), _n(MARK_Y - 2.5),
+                          _n(x - 12), _n(MARK_Y + 2.5)))
+
+        if m["row"]["scheme"] and d:
+            dx = LANE_X0 + LANE_PITCH * (d - 1) + LANE_PITCH / 2.0
+            out.append('<path class="sk-scheme" d="M%s %s l5 5 l-5 5 l-5 -5 Z"/>'
+                       % (_n(dx), MARK_Y - 5))
+
+        if m["i"] == 0:
+            out.append('<circle class="sk-mkey-ring" cx="%s" cy="%d" r="8"/>'
+                       '<circle class="sk-mkey" cx="%s" cy="%d" r="6"/>'
+                       % (_n(x), MARK_Y, _n(x), MARK_Y))
+        elif node.get("interpolated") is True:
+            out.append('<path class="sk-minterp" d="M%s %s l6 6 l-6 6 l-6 -6 Z"/>'
+                       % (_n(x), MARK_Y - 6))
+        else:
+            out.append('<circle class="sk-mdot" cx="%s" cy="%d" r="4.5"/>'
+                       % (_n(x), MARK_Y))
+            if self.footnote_only(m["row"]["id"]):
+                out.append('<path class="sk-mfn" d="M%s %s L%s %s"/>'
+                           % (_n(x - 3.5), MARK_Y + 8.5, _n(x + 3.5), MARK_Y + 8.5))
+        out.append("</svg>")
+        return "".join(out)
+
+    def _quote_btn(self, nid):
+        anchors = self.anchor_index.get(nid, [])
+        if not anchors:
+            return ""
+        usable = [a for a in anchors if a["ok"]]
+        disabled = "" if usable else " disabled"
+        title = "Ugrás a mondatra" if usable else "A mondat nem található a szövegben"
+        count = ('<span class="skel-qn">%d</span>' % len(anchors)) if len(anchors) > 1 else ""
+        return ('<button type="button" class="skel-quote skel-keep" data-skel-quote="%s" '
+                'title="%s" aria-label="%s"%s>❝%s</button>'
+                % (_esc(nid), _esc(title), _esc(title), disabled, count))
+
+    def _lane_rows_html(self, chunk):
+        lane = self.lanes[chunk]
+        out = []
+        for m in lane["meta"]:
+            nid = m["row"]["id"]
+            node = self.by_id[nid]
+            classes = ["skel-lrow", "sk-e-" + (m["row"]["etype"] or "root")]
+            if node.get("interpolated") is True:
+                classes.append("sk-interp")
+            verticals = "".join(
+                '<i class="skel-lane" style="left:%dpx"></i>' % x for x in m["verticals"])
+            role = m["bypass"]
+            if role:
+                cls = {"start-down": "sk-bp-down", "end-up": "sk-bp-down",
+                       "start-up": "sk-bp-up", "end-down": "sk-bp-up",
+                       "mid": "sk-bp-mid"}[role]
+                verticals += ('<i class="skel-lane %s" style="left:%dpx"></i>'
+                              % (cls, BYPASS_X))
+            out.append(
+                '<div class="%s" data-row="%d" data-depth="%d" data-parent="%s" '
+                'data-node="%s">'
+                '<button type="button" class="skel-mark skel-keep" data-skel-node="%s" '
+                'style="left:%dpx" aria-label="%s"></button>'
+                '%s%s%s'
+                '<span class="skel-llabel" data-skel-label="%s">%s</span>%s</div>'
+                % (" ".join(classes), m["i"], m["depth"],
+                   "" if m["parent"] is None else m["parent"], _esc(nid), _esc(nid),
+                   m["x"] - 13, _esc("%s · állítás" % chunk),
+                   self._scheme_hit(chunk, m), verticals, self._head_svg(chunk, m),
+                   _esc(nid), _esc(self.label_hu[nid]), self._quote_btn(nid)))
+        return "".join(out)
+
+    def _scheme_hit(self, chunk, m):
+        if not (m["row"]["scheme"] and m["depth"]):
+            return ""
+        dx = LANE_X0 + LANE_PITCH * (m["depth"] - 1) + LANE_PITCH / 2.0
+        return ('<button type="button" class="skel-dia skel-keep" data-skel-gloss="%s" '
+                'style="left:%spx" aria-label="%s"></button>'
+                % (_esc(m["row"]["scheme"]), _n(dx - 11),
+                   _esc(SCHEME_LABELS.get(m["row"]["scheme"], m["row"]["scheme"]))))
+
+    # ---- v1 nested list, kept as the below-700px fallback ----------------
+
+    def _list_row_html(self, row):
+        nid = row["id"]
+        node = self.by_id[nid]
         classes = ["skel-row"]
         if row["etype"]:
             classes.append("skel-e-" + row["etype"])
         if node.get("interpolated") is True:
             classes.append("skel-interp")
-        anchors = self.anchor_index.get(row["id"], [])
-        fn_numbers = sorted({a["fn"] for a in anchors if a["fn"] is not None})
-        # D3: every anchor of the node sits below the line.
-        footnote_only = bool(anchors) and all(a["fn"] is not None for a in anchors)
-
-        bits = []
-        glyph = ROW_GLYPHS.get(row["etype"] or "", "")
-        if glyph:
-            bits.append('<span class="skel-glyph" aria-hidden="true">%s</span>' % glyph)
-        bits.append('<span class="skel-label">%s</span>' % _esc(node["label"]))
-
-        if anchors:
-            usable = [a for a in anchors if a["ok"]]
-            count = ('<span class="skel-qn">%d</span>' % len(anchors)) if len(anchors) > 1 else ""
-            disabled = "" if usable else " disabled"
-            title = "Ugrás a mondatra" if usable else "A mondat nem található a szövegben"
-            bits.append('<button type="button" class="skel-quote" data-skel-quote="%s" '
-                        'title="%s" aria-label="%s"%s>❝%s</button>'
-                        % (_esc(row["id"]), _esc(title), _esc(title), disabled, count))
-        if footnote_only:
+        bits = ['<span class="skel-label" data-skel-label="%s">%s</span>'
+                % (_esc(nid), _esc(self.label_hu[nid]))]
+        bits.append(self._quote_btn(nid))
+        if self.footnote_only(nid):
+            fns = sorted({a["fn"] for a in self.anchor_index.get(nid, [])
+                          if a["fn"] is not None})
             bits.append('<span class="skel-chip skel-fn">lábjegyzet [%s]</span>'
-                        % _esc(", ".join(str(n) for n in fn_numbers)))
+                        % _esc(", ".join(str(n) for n in fns)))
         if node.get("interpolated") is True:
             bits.append('<span class="skel-chip skel-add">kiegészítés — a szöveg '
                         'ezt nem mondja ki</span>')
-        gloss = self._gloss_chip(row["scheme"])
-        if gloss:
-            bits.append(gloss)
         for dst, _etype, _scheme in row["extras"]:
-            target = self.by_id[dst]
-            tchunk = target.get("section")
-            label = tchunk if tchunk != chunk else shorten(target["label"], 46)
-            bits.append('<button type="button" class="skel-chip skel-also" '
-                        'data-skel-peek-node="%s">↗ továbbá: %s</button>'
-                        % (_esc(dst), _esc(label)))
-
-        kids = "".join(bits)
-        return '<li class="%s">%s' % (" ".join(classes), kids)
+            bits.append('<button type="button" class="skel-also skel-keep" '
+                        'data-skel-node="%s" title="Második szülő" '
+                        'aria-label="Második szülő">↗</button>' % _esc(dst))
+        return '<li class="%s">%s' % (" ".join(classes), "".join(bits))
 
     def _tree_html(self, chunk):
         """Nested <ul>/<li> from the pre-ordered rows; nesting reads '...because'."""
-        rows = self.rows[chunk]
-        out = []
-        prev = -1
-        for row in rows:
+        out, prev = [], -1
+        for row in self.rows[chunk]:
             depth = row["depth"]
             if depth > prev:
                 out.append('<ul class="skel-tree-list">')
@@ -495,7 +1023,7 @@ class SkeletonView(object):
                 while prev > depth:
                     out.append("</ul></li>")
                     prev -= 1
-            out.append(self._row_html(chunk, row))
+            out.append(self._list_row_html(row))
             prev = depth
         out.append("</li>")
         while prev > 0:
@@ -504,28 +1032,82 @@ class SkeletonView(object):
         out.append("</ul>")
         return "".join(out)
 
-    def post_html(self, phys):
-        """The end-of-section consolidation strips, one per chunk."""
-        chunks = [c for c in self.chunks if phys_section(c) == phys]
-        strips = []
-        for chunk in chunks:
-            key = self.key_of[chunk]
-            used = self._chips_row(
-                self._chunk_chips(self.used_by[chunk], "ezt használja:"))
-            strips.append(
-                '<div class="skel-post" data-skel-block hidden>'
-                '<div class="skel-post-inner">'
-                '<p class="skel-restate"><span class="skel-post-num">%s</span>%s</p>'
-                '<div class="skel-post-bar">'
-                '<button type="button" class="skel-expand" aria-expanded="false" '
-                'data-skel-expand="skel-tree-%s">Alállítások (%d)</button>%s</div>'
-                '<div class="skel-tree" id="skel-tree-%s" hidden>%s</div>'
-                '</div></div>'
-                % (_esc(chunk), _esc(shorten(key["label"], 150)),
-                   _esc(chunk), self.d1[chunk], used,
-                   _esc(chunk), self._tree_html(chunk))
-            )
-        return "".join(strips)
+    def _detail_block(self, chunk):
+        key = self.key_of[chunk]["id"]
+        lane = self.lanes[chunk]
+        helper = ('<p class="skel-helper">Mi támaszt mit alá ebben a szakaszban.</p>'
+                  if chunk == self.roof else "")
+        return (
+            '<div class="skel-strip" data-skel-chunk="%s">'
+            '<p class="skel-restate"><span class="skel-post-num">%s</span>'
+            '<span data-skel-label="%s">%s</span></p>%s'
+            '<button type="button" class="skel-card skel-keep" data-skel-card="%s" '
+            'aria-expanded="false" aria-controls="skel-detail-%s">'
+            '<span class="skel-card-tag" data-i18n="graphtag">%s</span>'
+            '<span class="skel-card-body">%s'
+            '<span class="skel-card-txt">'
+            '<span class="skel-card-comp">%s</span>'
+            '<span class="skel-card-key" data-skel-short="%s" data-skel-len="110">%s</span>'
+            '</span></span></button>'
+            '<div class="skel-detail" id="skel-detail-%s" data-chunk="%s" hidden>'
+            '<div class="skel-dhead">'
+            '<span class="skel-zoom" role="group" aria-label="Nagyítás">'
+            '<button type="button" class="skel-keep on" data-skel-zoom="full">teljes szöveg</button>'
+            '<button type="button" class="skel-keep" data-skel-zoom="bones">csak a váz</button>'
+            '</span>'
+            '<button type="button" class="skel-dbtn skel-keep" data-skel-legend>'
+            'mit jelentenek a jelek?</button>'
+            '<button type="button" class="skel-dbtn skel-keep" data-skel-collapse '
+            'aria-label="Bezárás" title="Bezárás">×</button></div>'
+            '<div class="skel-lanes" style="--sk-gut:%dpx">%s</div>'
+            '<div class="skel-list">%s</div>'
+            '</div></div>'
+            % (_esc(chunk), _esc(chunk), _esc(key), _esc(self.label_hu[key]), helper,
+               _esc(chunk), _esc(chunk), _esc(UI_STRINGS["hu"]["graphtag"]),
+               self._thumb_svg(chunk), _esc(self._composition(chunk)),
+               _esc(key), _esc(shorten(self.label_hu[key], 110)),
+               _esc(chunk), _esc(chunk),
+               lane["gutter"], self._lane_rows_html(chunk), self._tree_html(chunk)))
+
+    # ======================================================================
+    # legend + payload
+    # ======================================================================
+
+    def legend_html(self):
+        interp = sum(1 for n in self.by_id.values() if n.get("interpolated") is True)
+        return (
+            '<div class="skel-legend" id="skel-legend" role="dialog" '
+            'aria-label="Jelmagyarázat" hidden>'
+            '<button type="button" class="skel-legend-x skel-keep" id="skel-legend-x" '
+            'aria-label="Bezárás" title="Bezárás">×</button>'
+            '<h4>A térkép</h4><ul>'
+            '<li>A sáv nyolc doboza a nyolc gondolategység, olvasási sorrendben. '
+            'A 06-os szakasz két egységre esik szét (06a, 06b).</li>'
+            '<li>A fölöttük fekvő teljes szélességű lap a leíró gerinc (00): mind a '
+            'nyolc egység ezt támasztja alá. A lap kitöltése azt mutatja, hol tartasz.</li>'
+            '<li>Legfelül a tézis. A hozzá vezető nyíl <b>!</b> jele: ez a lépés '
+            'értékítélet, nem bizonyítás — a lap végéig halvány marad.</li>'
+            '<li>A dobozok alatti pontozott ívek: „ez az egység feltételezi amazt”. '
+            'A nyílhegy a <i>korábbi</i> egységre mutat; vastagabb ív = több '
+            'hivatkozás; üres nyílhegy = nem a fejezet fő állítására hivatkozik, '
+            'hanem egy alállítására.</li>'
+            '<li><b>≈</b> = a lépés analógián nyugszik. Rákoppintva megmondja, mit jelent.</li>'
+            '<li>Üres karika = még el nem olvasott egység, tele karika = már elolvasott. '
+            '<b>►</b> = az érvelés előre visz egy szálat.</li>'
+            '<li>A doboz alján a vonalka az egység terhelése: hány állítást kell '
+            'egyszerre fejben tartani. A szaggatott vég a kiegészítés.</li>'
+            '</ul><h4>Az ábra</h4><ul>'
+            '<li>A nyíl arra mutat, amit a farka tart.</li>'
+            '<li>Folytonos vonal = alátámasztja · halvány vékony = kifejti · '
+            'szaggatott = szűkíti · vastag szaggatott, kereszttel a végén = cáfolja.</li>'
+            '<li><b>⬤</b> a szakasz kulcsállítása · <b>●</b> a szövegből vett állítás · '
+            '<b>◇</b> kiegészítés: a térkép %d állításából %d-et a feltérképezés tett '
+            'hozzá, a szöveg ezeket nem mondja ki.</li>'
+            '<li>Vízszintes vonalka a pont alatt = a szöveg ezt csak lábjegyzetben mondja ki.</li>'
+            '<li>Gyémánt az élen = megnevezett következtetési séma; rákoppintva megmondja, melyik.</li>'
+            '<li><span class="skel-legend-q">❝</span> = ugrás a pontos mondatra az '
+            'angol szövegben.</li>'
+            '</ul></div>' % (len(self.by_id), interp))
 
     def json_blob(self):
         chunks = {}
@@ -533,28 +1115,60 @@ class SkeletonView(object):
             chunks[chunk] = {
                 "sec": self.section_index[phys_section(chunk)],
                 "box": "skel-pre-%s" % phys_section(chunk),
-                "label": _tidy(self.key_of[chunk]["label"]),
+                "post": "skel-post-%s" % phys_section(chunk),
+                "key": self.key_of[chunk]["id"],
+                "d1": self.d1[chunk],
+                "scheme": self.fan.get(chunk),
+                "up": self.builds_on[chunk],
+                "down": self.used_by[chunk],
             }
-        nodes = {nid: {"label": _tidy(n["label"]), "chunk": n.get("section")}
-                 for nid, n in self.also_nodes.items()}
+        nodes = {}
+        for nid, node in self.by_id.items():
+            nodes[nid] = {"chunk": node.get("section"), "lvl": node.get("level")}
+        parent = {}
+        for chunk in self.chunks:
+            meta = self.lanes[chunk]["meta"]
+            for m in meta:
+                if m["parent"] is not None:
+                    parent[m["row"]["id"]] = meta[m["parent"]]["row"]["id"]
+        arcs = {a["key"]: {"a": a["a"], "b": a["b"], "edges": a["edges"]}
+                for a in self.arcs}
+        for carry in self.carries:
+            arcs["%s>%s" % (carry["a"], carry["b"])] = {
+                "a": carry["a"], "b": carry["b"], "edges": carry["edges"]}
+        fans = {}
+        for src, dst, etype, _scheme in self.cross_edges:
+            if dst == self.backbone_id and etype == "supports":
+                fans[self._chunk_of(src)] = [[src, dst]]
         data = {
             "order": self.chunks,
+            "roof": self.roof,
             "chunks": chunks,
             "nodes": nodes,
+            "parent": parent,
             "anchors": self.anchor_index,
             "glosses": SCHEME_GLOSSES,
-            "up": self.builds_on,
-            "down": self.used_by,
+            "schemeNames": SCHEME_LABELS,
+            "arcs": arcs,
+            "fans": fans,
+            "labels": {"en": self.label_en, "hu": self.label_hu},
+            "ui": UI_STRINGS,
+            "thesis": {"id": self.thesis["id"], "note": THESIS_NOTE,
+                       "scheme": (self.thesis_edge or {}).get("scheme")},
         }
-        return json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
+        return json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
 
 
-def load_view(section_index, path=SKELETON_PATH):
+def load_view(section_index, path=SKELETON_PATH, labels_path=LABELS_HU_PATH):
     try:
         doc = load(path)
     except (ParseError, OSError) as exc:
         raise SkeletonError("%s: %s" % (os.path.relpath(path, _REPO), exc))
-    return SkeletonView(doc, section_index)
+    try:
+        overlay = load(labels_path)
+    except (ParseError, OSError) as exc:
+        raise SkeletonError("%s: %s" % (os.path.relpath(labels_path, _REPO), exc))
+    return SkeletonView(doc, (overlay or {}).get("labels"), section_index)
 
 
 # --------------------------------------------------------------------------
@@ -562,95 +1176,204 @@ def load_view(section_index, path=SKELETON_PATH):
 # --------------------------------------------------------------------------
 
 SKEL_CSS = r"""
-/* --- erwaz (argument skeleton) ------------------------------------------ */
-/* Lengths only; every colour is an existing var or a color-mix over one. */
+/* --- ervvaz (argument skeleton) v2 -------------------------------------- */
+/* Lengths only; every colour is an existing var or a color-mix over one.    */
+/* On dark, a bare --rule hairline disappears, so every hairline that has to */
+/* stay visible is mixed toward --muted.                                     */
 :root{
-  --skel-linex:-32px;    /* spine offset from the text column's left edge */
-  --skel-inset:20px;     /* .skel-pre-inner padding-left + border-left */
-  --skel-dot:11px;
+  --sk-line:color-mix(in srgb,var(--rule) 55%,var(--muted));
+  --sk-mark:14px;
 }
-@media (max-width:1199px){ :root{ --skel-linex:-16px; --skel-dot:8px; } }
-.skel-sans{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
-.skel-thesis,.skel-legend,.skel-pre,.skel-post,.skel-close{
+.skel-overview,.skel-pre,.skel-post,.skel-legend{
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
-.skel-tag{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.11em;
-  color:var(--muted);margin-bottom:8px}
-/* thesis card */
-.skel-thesis{max-width:820px;margin:22px auto 0;padding:18px 24px;
-  border:1px solid var(--rule);border-radius:10px;
-  background:color-mix(in srgb,var(--accent) 5%,var(--bg))}
-.skel-thesis-claim{margin:0 0 12px;font-size:17px;line-height:1.45;font-weight:600}
-.skel-thesis-line{margin:0;display:flex;flex-wrap:wrap;align-items:center;gap:8px;
-  font-size:14px;color:var(--muted);line-height:1.4}
-.skel-thesis-step{flex:1 1 220px;min-width:160px}
-.skel-arrow{color:var(--accent);font-size:15px}
-.skel-thesis-note{margin:10px 0 0;font-size:13px;color:var(--muted);font-style:italic}
-/* legend */
-.skel-legend{position:relative;max-width:820px;margin:12px auto 0;padding:14px 44px 14px 24px;
-  border:1px dashed var(--rule);border-radius:10px;font-size:13.5px;color:var(--muted)}
-.skel-legend ul{margin:0;padding-left:1.1em}
-.skel-legend li{margin:0 0 5px;line-height:1.5}
-.skel-legend-interp{font-style:italic;border-left:2px dashed var(--muted);padding-left:6px}
-.skel-legend-q{color:var(--accent)}
-.skel-legend-x{position:absolute;top:4px;right:4px;width:44px;height:44px;
-  border:0;background:transparent;color:var(--muted);font-size:20px;line-height:1;cursor:pointer}
-.skel-legend-x:hover{color:var(--fg)}
-/* pre-section box */
-.skel-pre{position:relative;margin:34px 0 0}
+
+/* ---------- the map ---------- */
+.skel-mapwrap{margin:0 0 14px}
+svg.skel-map{display:block;width:100%;height:auto;overflow:visible}
+.skel-cap{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:2px;
+  font-size:12.5px;color:var(--muted)}
+.skel-cap-num{font-family:ui-monospace,Menlo,monospace;letter-spacing:.1em}
+.skel-cap-num::after{content:'·';margin-left:8px;opacity:.6}
+/* rail + roof + capsule */
+.sk-cell,.sk-roof,.sk-cap{fill:var(--card-bg);stroke:var(--sk-line);stroke-width:1}
+.sk-cap{stroke-width:1;paint-order:stroke}
+.sk-capg .sk-cap{stroke-dasharray:none}
+.sk-id{font-family:ui-monospace,Menlo,monospace;font-size:11px;letter-spacing:.06em;
+  fill:var(--muted);text-anchor:middle}
+.sk-roofid{text-anchor:start}
+.sk-captext{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:10px;font-weight:700;letter-spacing:.14em;fill:var(--muted);text-anchor:middle}
+.sk-prog{fill:color-mix(in srgb,var(--accent) 16%,transparent);stroke:none}
+.sk-bar{stroke:color-mix(in srgb,var(--muted) 70%,transparent);stroke-width:2;fill:none}
+.sk-bard{stroke-dasharray:2 2}
+/* node states: ink only, geometry never moves */
+.sk-node.sk-self .sk-cell,.sk-node.sk-self .sk-roof{stroke:var(--accent);stroke-width:1.6}
+.sk-pre .sk-node.sk-self .sk-cell,.sk-pre .sk-node.sk-self .sk-roof{fill:var(--bg)}
+.sk-post .sk-node.sk-self .sk-cell,.sk-post .sk-node.sk-self .sk-roof{fill:var(--accent)}
+.sk-post .sk-node.sk-self .sk-id{fill:var(--bg)}
+.sk-post .sk-node.sk-self .sk-bar{stroke:color-mix(in srgb,var(--bg) 75%,transparent)}
+.sk-node.sk-dep .sk-cell,.sk-node.sk-dep .sk-roof,.sk-node.sk-dep .sk-cap{
+  stroke:var(--accent);fill:color-mix(in srgb,var(--accent) 12%,var(--bg))}
+.sk-node.sk-dep .sk-id,.sk-node.sk-dep .sk-captext{fill:var(--accent)}
+.sk-node.sk-used .sk-cell,.sk-node.sk-used .sk-roof{
+  stroke:color-mix(in srgb,var(--accent) 50%,var(--rule));stroke-dasharray:3 2}
+.sk-node.sk-past .sk-cell,.sk-node.sk-past .sk-roof{fill:var(--card-bg)}
+.sk-node.sk-ahead{opacity:.45}
+/* edges */
+.sk-arcline{fill:none;stroke:var(--sk-line);stroke-dasharray:1.5 2.5;stroke-linecap:round}
+.sk-fanline,.sk-precline{fill:none;stroke:var(--sk-line);stroke-width:1}
+.sk-precline{stroke-dasharray:3 3;stroke:color-mix(in srgb,var(--note) 40%,transparent)}
+.sk-prec.sk-done .sk-precline{stroke-dasharray:none;stroke:var(--note)}
+.sk-prec.sk-done .sk-head{fill:var(--note);stroke:none}
+.sk-head{fill:var(--sk-line);stroke:none}
+.sk-head.sk-hollow{fill:var(--bg);stroke:var(--sk-line);stroke-width:1}
+.sk-chev{fill:color-mix(in srgb,var(--muted) 55%,transparent)}
+.sk-gl-c{fill:var(--bg);stroke:var(--sk-line);stroke-width:1}
+.sk-gl-t{font-size:10px;fill:var(--muted);text-anchor:middle;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.sk-arc.sk-live .sk-arcline,.sk-fan.sk-live .sk-fanline{stroke:var(--accent);stroke-width:1.4}
+.sk-arc.sk-live .sk-head,.sk-fan.sk-live .sk-head{fill:var(--accent)}
+.sk-arc.sk-live .sk-head.sk-hollow{fill:var(--bg);stroke:var(--accent)}
+.sk-gl.sk-live .sk-gl-c{stroke:var(--accent)}
+.sk-gl.sk-live .sk-gl-t{fill:var(--accent)}
+.sk-chev.sk-live{fill:var(--accent)}
+/* transient lighting: the edges incident to the node whose card is open */
+svg.skel-map .sk-hot .sk-arcline,svg.skel-map .sk-hot .sk-fanline{
+  stroke:var(--accent);stroke-width:1.6}
+svg.skel-map .sk-hot .sk-head{fill:var(--accent)}
+svg.skel-map .sk-hot .sk-head.sk-hollow{fill:var(--bg);stroke:var(--accent)}
+svg.skel-map .sk-hot{opacity:1}
+.sk-arc.sk-epast,.sk-fan.sk-epast{opacity:.7}
+.sk-arc.sk-eahead,.sk-fan.sk-eahead,.sk-chev.sk-eahead{opacity:.35}
+/* hit areas */
+.sk-hit{fill:transparent;stroke:none;cursor:pointer}
+.sk-hit-e{fill:none;stroke:transparent;stroke-width:14;pointer-events:none}
+svg.skel-map .sk-arc:hover .sk-arcline,svg.skel-map .sk-fan:hover .sk-fanline{
+  stroke:var(--accent)}
+@media (hover:hover) and (pointer:fine){
+  .sk-hit-e{pointer-events:stroke;cursor:help}
+}
+@media (max-width:559px){
+  .sk-id{font-size:17px}
+  .sk-captext{font-size:15px;letter-spacing:.06em}
+  .sk-gl-t{font-size:15px}
+  .sk-glyphhit{display:none}
+  svg.skel-map .sk-arc:not(.sk-live){display:none}
+  svg.skel-map.sk-ov .sk-arcs{display:none}
+}
+
+/* ---------- pre box ---------- */
+.skel-pre{margin:34px 0 0}
 .skel-pre-inner{border-left:3px solid color-mix(in srgb,var(--accent) 55%,var(--rule));
   padding:14px 18px 14px 17px;background:color-mix(in srgb,var(--accent) 4%,var(--bg));
   border-radius:0 8px 8px 0}
-.skel-pre-head{font-family:ui-monospace,Menlo,monospace;font-size:12px;letter-spacing:.1em;
-  color:var(--muted);margin-bottom:8px}
-.skel-keyblock{position:relative}
-.skel-keyblock + .skel-keyblock{margin-top:14px;padding-top:14px;border-top:1px dotted var(--rule)}
-.skel-sub{font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--muted);margin-bottom:3px}
+.skel-keyblock + .skel-keyblock{margin-top:14px;padding-top:14px;
+  border-top:1px dotted var(--rule)}
+.skel-sub{font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--muted);
+  margin-bottom:3px}
 .skel-key{margin:0;font-size:16px;line-height:1.45;font-weight:600}
-.skel-chips{display:flex;flex-wrap:wrap;align-items:center;gap:8px;row-gap:12px;margin-top:8px}
-.skel-role{font-size:12px;color:var(--muted);letter-spacing:.02em}
-.skel-chip{display:inline-flex;align-items:center;min-height:26px;padding:4px 10px;
-  border:1px solid var(--rule);border-radius:13px;background:var(--card-bg);
-  color:var(--muted);font-size:12px;line-height:1.2;font-family:inherit}
-button.skel-chip{cursor:pointer;position:relative}
-/* keep the visual pill small but the touch target >=44px */
-button.skel-chip::after{content:'';position:absolute;left:0;right:0;top:50%;
-  height:44px;transform:translateY(-50%)}
-button.skel-chip:hover{color:var(--fg);border-color:color-mix(in srgb,var(--accent) 50%,var(--rule))}
-.skel-chip.skel-more{opacity:.7}
-.skel-chip.skel-chunk{font-family:ui-monospace,Menlo,monospace;letter-spacing:.04em;
-  min-width:44px;justify-content:center}
-.skel-chip.skel-add,.skel-chip.skel-fn{border-style:dashed}
-/* spine */
-.skel-dot{display:none}
-:root.skel-on .skel-pre::before,:root.skel-on .skel-post::before,:root.skel-on .sec::before{
-  content:'';position:absolute;left:var(--skel-linex);top:0;bottom:0;width:1px;
-  background:color-mix(in srgb,var(--rule) 90%,var(--muted));pointer-events:none}
-:root.skel-on .skel-dot{display:block;position:absolute;top:-8px;
-  left:calc(var(--skel-linex) - var(--skel-inset) - 22px);
-  width:44px;height:44px;border:0;background:transparent;cursor:pointer;padding:0}
-.skel-dot::before{content:'';position:absolute;left:50%;top:50%;
-  width:var(--skel-dot);height:var(--skel-dot);margin:calc(var(--skel-dot) / -2) 0 0 calc(var(--skel-dot) / -2);
-  border-radius:50%;background:var(--bg);
-  border:2px solid color-mix(in srgb,var(--accent) 70%,var(--rule))}
-.skel-dot:hover::before{background:var(--accent)}
-@media (max-width:899px){
-  :root.skel-on .skel-pre::before,:root.skel-on .skel-post::before,
-  :root.skel-on .sec::before,:root.skel-on .skel-dot{display:none;content:none}
-}
-/* end-of-section strip */
-.skel-post{position:relative;margin:0 0 6px;padding-top:18px}
+.skel-overview{max-width:820px;margin:22px auto 0;padding:0 24px}
+
+/* ---------- post block ---------- */
+.skel-post{margin:0 0 6px;padding-top:18px}
 .skel-post-inner{border-top:1px solid var(--rule);padding-top:14px}
-.skel-restate{margin:0 0 10px;font-size:14.5px;line-height:1.5;color:var(--muted)}
+.skel-strip + .skel-strip{margin-top:20px}
+.skel-restate{margin:0 0 12px;font-size:14.5px;line-height:1.5;color:var(--muted)}
 .skel-post-num{font-family:ui-monospace,Menlo,monospace;font-size:12px;letter-spacing:.1em;
   color:var(--muted);margin-right:10px}
-.skel-post-bar{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
-.skel-expand{min-height:44px;padding:8px 16px;border:1px solid var(--rule);border-radius:22px;
-  background:var(--card-bg);color:var(--muted);font-size:13px;font-family:inherit;cursor:pointer}
-.skel-expand:hover{color:var(--fg);border-color:color-mix(in srgb,var(--accent) 50%,var(--rule))}
-.skel-expand[aria-expanded="true"]{color:var(--fg);
-  border-color:color-mix(in srgb,var(--accent) 60%,var(--rule))}
-/* rows */
-.skel-tree{margin-top:14px}
+.skel-helper{margin:0 0 10px;font-size:13px;color:var(--muted);font-style:italic}
+/* collapsed card = a real thumbnail of the same graph */
+.skel-card{display:block;width:100%;min-height:44px;text-align:left;cursor:pointer;
+  border:1px solid var(--rule);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;
+  background:var(--card-bg);color:var(--fg);padding:12px 16px;font-family:inherit}
+/* display:block above would beat the UA [hidden] rule, so restate it */
+.skel-card[hidden]{display:none}
+.skel-card:hover{border-color:color-mix(in srgb,var(--accent) 50%,var(--rule));
+  border-left-color:var(--accent)}
+.skel-card-tag{display:block;font-size:10.5px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.11em;color:var(--muted);margin-bottom:8px}
+.skel-card-body{display:flex;align-items:flex-start;gap:16px}
+svg.skel-thumb{flex:0 0 auto;width:124px;height:auto;max-height:86px}
+.sk-tline{fill:none;stroke:var(--sk-line);stroke-width:.7}
+.sk-tbypass{stroke-dasharray:1.5 1.5}
+.sk-tlabel{stroke:color-mix(in srgb,var(--muted) 26%,transparent);stroke-width:1.6}
+.sk-tdot{fill:color-mix(in srgb,var(--muted) 70%,transparent)}
+.sk-tkey{fill:var(--accent)}
+.sk-tinterp{fill:var(--bg);stroke:var(--muted);stroke-width:.7;stroke-dasharray:1.2 1.2}
+.skel-card-txt{flex:1 1 auto;min-width:0}
+.skel-card-comp{display:block;font-family:ui-monospace,Menlo,monospace;font-size:11.5px;
+  color:var(--muted);margin-bottom:6px}
+.skel-card-key{display:block;font-size:14px;line-height:1.45;color:var(--fg)}
+/* detail header */
+.skel-detail{border:1px solid var(--rule);border-left:3px solid var(--accent);
+  border-radius:0 8px 8px 0;padding:10px 14px 14px;margin-top:0}
+.skel-dhead{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:12px}
+.skel-zoom{display:inline-flex;border:1px solid var(--rule);border-radius:20px;overflow:hidden}
+.skel-zoom button{border:0;background:transparent;color:var(--muted);min-height:36px;
+  padding:6px 14px;font-size:12.5px;cursor:pointer;font-family:inherit}
+.skel-zoom button.on{background:var(--accent);color:var(--bg)}
+.skel-dbtn{min-height:36px;padding:6px 14px;border:1px solid var(--rule);border-radius:20px;
+  background:var(--card-bg);color:var(--muted);font-size:12.5px;cursor:pointer;
+  font-family:inherit}
+.skel-dbtn:hover{color:var(--fg);border-color:color-mix(in srgb,var(--accent) 50%,var(--rule))}
+.skel-dhead [data-skel-collapse]{margin-left:auto;min-width:40px;font-size:17px;line-height:1}
+
+/* ---------- lanes (>=700px) ---------- */
+.skel-lanes{display:none}
+@media (min-width:700px){
+  .skel-lanes{display:block}
+  .skel-detail .skel-list{display:none}
+}
+/* the zoom pill only governs the lane view, so it goes with it */
+@media (max-width:699px){ .skel-zoom{display:none} }
+.skel-lrow{position:relative;display:grid;grid-template-columns:var(--sk-gut) 1fr 44px;
+  align-items:start;min-height:40px;font-size:14.5px;line-height:1.5}
+.skel-llabel{grid-column:2;padding:3px 8px 3px 0}
+.skel-lrow .skel-quote{grid-column:3}
+.skel-lane{position:absolute;top:0;bottom:0;width:1px;background:var(--sk-line);
+  pointer-events:none}
+.skel-lane.sk-bp-down{top:var(--sk-mark);bottom:0}
+.skel-lane.sk-bp-up{top:0;height:var(--sk-mark)}
+.skel-lane.sk-bp-mid{top:0;bottom:0}
+.skel-lane.sk-bp-down,.skel-lane.sk-bp-up,.skel-lane.sk-bp-mid{
+  background:repeating-linear-gradient(to bottom,var(--sk-line) 0 2px,transparent 2px 4px)}
+svg.skel-lhead{position:absolute;left:0;top:0;pointer-events:none;overflow:visible}
+.sk-ed{fill:none;stroke:var(--sk-line);stroke-width:1.5}
+.sk-ed-elaborates{stroke-width:1;opacity:.35}
+.sk-ed-qualifies{stroke-dasharray:5 3;stroke:color-mix(in srgb,var(--note) 55%,var(--rule))}
+.sk-ed-rebuts{stroke-width:2;stroke-dasharray:4 3;stroke:var(--note)}
+.sk-ed-bypass{stroke-dasharray:2 2}
+.sk-term{fill:var(--sk-line);stroke:none}
+.sk-term-elaborates{opacity:.35}
+.sk-term-qualifies{fill:color-mix(in srgb,var(--note) 55%,var(--rule))}
+.sk-term-bar{fill:none;stroke:var(--note);stroke-width:2}
+.sk-scheme{fill:var(--bg);stroke:var(--accent);stroke-width:1.2}
+.sk-mdot{fill:color-mix(in srgb,var(--muted) 70%,transparent)}
+.sk-mkey{fill:var(--accent)}
+.sk-mkey-ring{fill:none;stroke:var(--accent);stroke-width:2;opacity:.45}
+.sk-minterp{fill:var(--bg);stroke:var(--muted);stroke-width:1.5;stroke-dasharray:2.5 2}
+.sk-mfn{stroke:var(--muted);stroke-width:1.4}
+.skel-mark{position:absolute;top:calc(var(--sk-mark) - 15px);width:26px;height:30px;
+  border:0;background:transparent;padding:0;cursor:pointer;z-index:2;border-radius:6px}
+.skel-mark:focus-visible{outline:2px solid var(--accent);outline-offset:0}
+.skel-dia{position:absolute;top:calc(var(--sk-mark) - 13px);width:22px;height:26px;
+  border:0;background:transparent;padding:0;cursor:help;z-index:1;border-radius:6px}
+.skel-lanes.sk-bones .skel-llabel{display:-webkit-box;-webkit-line-clamp:1;
+  line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.skel-lanes.sk-bones .skel-lrow{min-height:40px}
+/* row highlight (sticky; dismissed by a second tap, Esc, or the clear bar) */
+.skel-lrow.sk-r-self{background:color-mix(in srgb,var(--accent) 10%,transparent);
+  border-radius:6px}
+.skel-lrow.sk-r-desc{background:color-mix(in srgb,var(--accent) 4%,transparent)}
+.skel-lrow.sk-r-anc .sk-ed,.skel-lrow.sk-r-self .sk-ed{stroke:var(--accent)}
+.skel-lrow.sk-r-anc .sk-term,.skel-lrow.sk-r-self .sk-term{fill:var(--accent)}
+.skel-lrow.sk-r-anc .sk-term-bar,.skel-lrow.sk-r-self .sk-term-bar{
+  fill:none;stroke:var(--accent)}
+.skel-lrow.sk-r-anc .sk-mdot,.skel-lrow.sk-r-anc .sk-mkey{fill:var(--accent)}
+.skel-lrow.sk-r-anc .sk-minterp{stroke:var(--accent)}
+
+/* ---------- nested-list fallback (<700px) ---------- */
+.skel-list{margin-top:4px}
 .skel-tree-list{list-style:none;margin:0;padding:0}
 .skel-tree-list .skel-tree-list{margin:6px 0 6px 14px}
 .skel-row{position:relative;margin:0 0 16px;padding:2px 0 2px 12px;
@@ -660,25 +1383,50 @@ button.skel-chip:hover{color:var(--fg);border-color:color-mix(in srgb,var(--acce
   border-left-color:color-mix(in srgb,var(--note) 55%,transparent)}
 .skel-e-rebuts{border-left-style:dotted;border-left-color:var(--note)}
 .skel-interp{border-left-style:dashed}
-/* italic marks the interpolated claim itself, never the rows nested under it */
 .skel-interp > .skel-label{font-style:italic}
-.skel-glyph{font-family:ui-monospace,Menlo,monospace;color:var(--muted);
-  font-size:12px;margin-right:6px;font-style:normal}
+.skel-lrow.sk-interp .skel-llabel{font-style:italic}
 .skel-label{margin-right:6px}
+.skel-chip{display:inline-flex;align-items:center;min-height:26px;padding:4px 10px;
+  border:1px solid var(--rule);border-radius:13px;background:var(--card-bg);
+  color:var(--muted);font-size:12px;line-height:1.2;font-family:inherit}
+.skel-chip.skel-add,.skel-chip.skel-fn{border-style:dashed}
+.skel-also{min-width:44px;min-height:44px;border:0;background:transparent;
+  color:var(--muted);font-size:15px;cursor:pointer;font-family:inherit;
+  margin:-11px 0;vertical-align:middle}
+.skel-also:hover{color:var(--accent)}
 .skel-quote{display:inline-flex;align-items:center;justify-content:center;
   border:0;background:transparent;color:var(--accent);cursor:pointer;font-family:inherit;
   font-size:15px;line-height:1;padding:0 12px;min-width:44px;min-height:44px;
-  margin:-11px -2px;vertical-align:middle}
+  vertical-align:middle}
 .skel-quote[disabled]{color:var(--muted);opacity:.5;cursor:default}
 .skel-quote .skel-qn{font-size:10px;vertical-align:super;margin-left:1px}
-.skel-row .skel-chip{margin-left:4px;vertical-align:middle}
-.skel-row button.skel-chip::after{height:44px}
-/* closing restatement */
-.skel-close{max-width:820px;margin:26px auto 0;padding:16px 20px;
-  border:1px solid var(--rule);border-radius:10px;
-  background:color-mix(in srgb,var(--accent) 5%,var(--bg))}
-.skel-close p{margin:0;font-size:15.5px;line-height:1.45;font-weight:600}
-/* highlight + flash */
+
+/* ---------- legend (one panel, shared by both components) ---------- */
+.skel-legend{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);
+  z-index:66;width:min(620px,calc(100vw - 28px));max-height:74vh;overflow:auto;
+  background:var(--card-bg);color:var(--fg);border:1px solid var(--card-rule);
+  border-radius:12px;box-shadow:0 12px 38px rgba(0,0,0,.26);
+  padding:16px 44px 16px 20px;font-size:13.5px;line-height:1.55}
+.skel-legend h4{margin:12px 0 6px;font-size:11.5px;text-transform:uppercase;
+  letter-spacing:.1em;color:var(--accent)}
+.skel-legend h4:first-of-type{margin-top:0}
+.skel-legend ul{margin:0;padding-left:1.1em;color:var(--muted)}
+.skel-legend li{margin:0 0 5px}
+.skel-legend-q{color:var(--accent)}
+.skel-legend-x{position:absolute;top:4px;right:4px;width:44px;height:44px;border:0;
+  background:transparent;color:var(--muted);font-size:20px;line-height:1;cursor:pointer}
+.skel-legend-x:hover{color:var(--fg)}
+
+/* ---------- shared floating affordances + tip cards ---------- */
+#skel-back,#skel-clear{position:fixed;left:14px;z-index:70;display:flex;align-items:center;
+  gap:4px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+#skel-back[hidden],#skel-clear[hidden]{display:none}
+#skel-back{bottom:14px}
+#skel-clear{bottom:66px}
+.skel-float-btn,.skel-float-x{min-height:44px;padding:8px 14px;border:1px solid var(--rule);
+  border-radius:22px;background:var(--card-bg);color:var(--fg);font-size:13px;cursor:pointer;
+  box-shadow:0 6px 20px rgba(0,0,0,.18);font-family:inherit}
+.skel-float-x{color:var(--muted)}
 mark.skel-hit{background:color-mix(in srgb,var(--accent) 26%,transparent);
   color:inherit;border-radius:3px;padding:1px 0}
 .skel-flash{animation:skel-flash 1.2s ease-out 1}
@@ -688,33 +1436,33 @@ mark.skel-hit{background:color-mix(in srgb,var(--accent) 26%,transparent);
 }
 .skel-pulse{animation:skel-pulse .9s ease-out 2}
 @keyframes skel-pulse{0%{opacity:1}50%{opacity:.35}100%{opacity:1}}
-/* hover dependency highlight (desktop only) */
-:root.skel-hov .skel-pre{opacity:.4;transition:opacity .12s}
-:root.skel-hov .skel-pre.skel-self,:root.skel-hov .skel-pre.skel-up,
-:root.skel-hov .skel-pre.skel-down{opacity:1}
-.skel-pre.skel-up .skel-pre-inner{background:color-mix(in srgb,var(--accent) 12%,var(--bg));
-  border-left-color:var(--accent)}
-.skel-pre.skel-down .skel-pre-inner{outline:1px dashed color-mix(in srgb,var(--muted) 60%,transparent);
-  outline-offset:2px}
-/* floating, always-dismissible affordances */
-#skel-back,#skel-clear{position:fixed;left:14px;z-index:70;display:flex;align-items:center;gap:4px;
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
-/* display:flex above would beat the UA [hidden] rule, so restate it */
-#skel-back[hidden],#skel-clear[hidden]{display:none}
-#skel-back{bottom:14px}
-#skel-clear{bottom:66px}
-.skel-float-btn,.skel-float-x{min-height:44px;padding:8px 14px;border:1px solid var(--rule);
-  border-radius:22px;background:var(--card-bg);color:var(--fg);font-size:13px;cursor:pointer;
-  box-shadow:0 6px 20px rgba(0,0,0,.18);font-family:inherit}
-.skel-float-x{padding:8px 14px;color:var(--muted)}
-/* peek card inside the shared #tip */
 #tip .skel-peek-num{display:block;font-family:ui-monospace,Menlo,monospace;font-size:11px;
   letter-spacing:.1em;color:var(--muted);margin-bottom:4px}
 #tip .skel-peek-label{display:block;font-size:14.5px;line-height:1.45;margin-bottom:10px}
-#tip .skel-goto{min-height:40px;padding:8px 14px;border:1px solid var(--rule);border-radius:20px;
-  background:var(--card-bg);color:var(--accent);font-size:13px;cursor:pointer;font-family:inherit}
-/* the erwaz toggle shares .themebtn's look; only the on-state differs */
+#tip .skel-peek-note{display:block;font-size:13px;color:var(--muted);font-style:italic;
+  margin-bottom:10px}
+#tip .skel-peek-role{display:block;font-size:12px;color:var(--muted);margin:8px 0 4px}
+#tip .skel-peek-row{display:flex;flex-wrap:wrap;gap:6px}
+#tip .skel-goto,#tip .skel-chunkbtn{min-height:44px;padding:8px 14px;border:1px solid var(--rule);
+  border-radius:22px;background:var(--card-bg);color:var(--accent);font-size:13px;
+  cursor:pointer;font-family:inherit}
+#tip .skel-chunkbtn{font-family:ui-monospace,Menlo,monospace;min-width:52px}
+#tip .skel-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+#tip .skel-word{display:inline-flex;align-items:center;min-height:24px;padding:2px 9px;
+  border:1px solid var(--rule);border-radius:12px;color:var(--muted);font-size:12px}
+#tip .skel-qlist{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+#tip .skel-qbtn{min-height:44px;padding:6px 12px;border:1px solid var(--rule);
+  border-radius:22px;background:var(--card-bg);color:var(--accent);font-size:13px;
+  cursor:pointer;font-family:inherit}
+/* the ervvaz toggle shares .themebtn's look; only the on-state differs */
 .skelbtn.on{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+.skel-langpill{display:inline-flex;border:1px solid var(--rule);border-radius:20px;
+  overflow:hidden;background:var(--card-bg)}
+.skel-langpill[hidden]{display:none}
+.skel-langpill button{border:0;background:transparent;color:var(--muted);padding:6px 10px;
+  font-size:12px;font-weight:600;letter-spacing:.06em;cursor:pointer;
+  font-family:-apple-system,system-ui,sans-serif}
+.skel-langpill button.on{background:var(--accent);color:var(--bg)}
 """
 
 
@@ -723,57 +1471,177 @@ SKEL_JS = r"""
   if (typeof SKEL === 'undefined' || !SKEL) return;
   var root = document.documentElement;
   var btn = document.getElementById('skelbtn');
+  var langPill = document.getElementById('skel-lang');
   var blocks = document.querySelectorAll('[data-skel-block]');
   var backBar = document.getElementById('skel-back');
   var backBtn = document.getElementById('skel-back-btn');
   var backX = document.getElementById('skel-back-x');
   var clearBar = document.getElementById('skel-clear');
   var clearBtn = document.getElementById('skel-clear-btn');
+  var legend = document.getElementById('skel-legend');
   var tip = document.getElementById('tip');
   var on = false;                 // default OFF on every load; never persisted
+  var lang = 'hu';                // label language; never persisted
   var backTarget = null;
+  var cardKey = null;             // what the shared #tip currently shows
+  var hoverTimer = null;
+  var finePointer = window.matchMedia &&
+    window.matchMedia('(hover:hover) and (pointer:fine)').matches;
 
+  function L(id){ var m = SKEL.labels[lang]; return (m && m[id]) || SKEL.labels.en[id] || id; }
+  function U(key){ return (SKEL.ui[lang] || SKEL.ui.hu)[key] || ''; }
+  function esc(s){
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  // Mirror of shorten() in skeleton_view.py; the two must agree or a language
+  // switch would silently re-cut every compact restatement differently.
+  function shorten(s, n){
+    s = String(s || '').replace(/\s+/g, ' ').trim();
+    if (s.length <= n) return s;
+    var cut = s.slice(0, n), k = cut.lastIndexOf(' ');
+    if (k > 0) cut = cut.slice(0, k);
+    return cut.replace(/[ ,;:.—-]+$/, '') + '…';
+  }
+
+  /* ---- on/off + language ------------------------------------------- */
   function setOn(next){
     on = next;
     root.classList.toggle('skel-on', on);
     btn.classList.toggle('on', on);
     btn.setAttribute('aria-pressed', on ? 'true' : 'false');
     for (var i = 0; i < blocks.length; i++){
-      // a dismissed block drops the attribute and stays gone for this load
       if (blocks[i].hasAttribute('data-skel-block')) blocks[i].hidden = !on;
     }
-    if (!on){ clearMarks(); hideBack(); clearHover(); closeTip(); }
+    if (langPill) langPill.hidden = !on;
+    if (!on){ clearMarks(); hideBack(); closeTip(); clearRows(); hideLegend(); }
+  }
+
+  function applyLang(){
+    var i, els = document.querySelectorAll('[data-skel-label]');
+    for (i = 0; i < els.length; i++){
+      els[i].textContent = L(els[i].getAttribute('data-skel-label'));
+    }
+    els = document.querySelectorAll('[data-skel-short]');
+    for (i = 0; i < els.length; i++){
+      var n = parseInt(els[i].getAttribute('data-skel-len'), 10) || 110;
+      els[i].textContent = shorten(L(els[i].getAttribute('data-skel-short')), n);
+    }
+    els = document.querySelectorAll('[data-i18n]');
+    for (i = 0; i < els.length; i++){
+      els[i].textContent = U(els[i].getAttribute('data-i18n'));
+    }
+  }
+  function setLang(next){
+    if (next === lang) return;
+    lang = next;
+    if (langPill){
+      var bs = langPill.querySelectorAll('button');
+      for (var i = 0; i < bs.length; i++){
+        bs[i].classList.toggle('on', bs[i].getAttribute('data-skel-lang') === lang);
+      }
+    }
+    applyLang();
+    closeTip();            // a stale card would keep the old language
   }
 
   /* ---- shared hover card ------------------------------------------- */
-  function openTip(el, inner){
+  function openTip(el, inner, key){
+    cardKey = key || null;
     if (window.SKEL_TIP) window.SKEL_TIP.open(el, inner);
   }
-  function closeTip(){ if (window.SKEL_TIP) window.SKEL_TIP.close(); }
-
-  function glossCard(key){
-    var text = SKEL.glosses[key] || '';
-    return '<p>' + escapeHtml(text) + '</p>';
+  function closeTip(){ cardKey = null; if (window.SKEL_TIP) window.SKEL_TIP.close(); }
+  function tipShows(key){
+    return cardKey === key && tip && tip.classList.contains('show');
   }
-  function peekCard(num, label, goto){
-    var out = '<span class="skel-peek-num">' + escapeHtml(num) + '</span>' +
-              '<span class="skel-peek-label">' + escapeHtml(label) + '</span>';
-    if (goto){
-      out += '<button type="button" class="skel-goto" data-skel-travel="' +
-             escapeHtml(goto) + '">→ odaugrás</button>';
+
+  /* ---- cards -------------------------------------------------------- */
+  function chunkRow(role, list){
+    if (!list || !list.length) return '';
+    var out = '<span class="skel-peek-role">' + esc(role) + '</span>' +
+              '<span class="skel-peek-row">';
+    for (var i = 0; i < list.length; i++){
+      out += '<button type="button" class="skel-chunkbtn skel-keep" ' +
+             'data-skel-travel="' + esc(list[i]) + '">' + esc(list[i]) + '</button>';
+    }
+    return out + '</span>';
+  }
+  function glossCard(key){
+    var name = SKEL.schemeNames[key] || key;
+    return '<span class="skel-peek-num">' + esc(name) + '</span><p>' +
+           esc(SKEL.glosses[key] || '') + '</p>';
+  }
+  function nodeCard(chunk){
+    if (chunk === 'thesis'){
+      return '<span class="skel-peek-num">' + esc(U('thesis-cap')) + '</span>' +
+             '<span class="skel-peek-label">' + esc(L(SKEL.thesis.id)) + '</span>' +
+             '<span class="skel-peek-note">' + esc(SKEL.thesis.note) + '</span>' +
+             (SKEL.thesis.scheme ? '<span class="skel-word">' +
+               esc(SKEL.schemeNames[SKEL.thesis.scheme] || SKEL.thesis.scheme) +
+               '</span>' : '');
+    }
+    var meta = SKEL.chunks[chunk];
+    if (!meta) return '';
+    var out = '<span class="skel-peek-num">' + esc(chunk) + ' · ' +
+              meta.d1 + ' állítás</span>' +
+              '<span class="skel-peek-label">' + esc(L(meta.key)) + '</span>';
+    if (meta.scheme){
+      out += '<span class="skel-word">' +
+             esc(SKEL.schemeNames[meta.scheme] || meta.scheme) + '</span>';
+    }
+    out += chunkRow('mire épül:', meta.up);
+    out += chunkRow('ezt használja:', meta.down);
+    out += '<span class="skel-actions">' +
+           '<button type="button" class="skel-goto skel-keep" data-skel-travel="' +
+           esc(chunk) + '">→ elejére</button>' +
+           '<button type="button" class="skel-goto skel-keep" data-skel-detail="' +
+           esc(chunk) + '">⋮ részletei</button></span>';
+    return out;
+  }
+  function edgeCard(key){
+    var rec = SKEL.arcs[key];
+    if (!rec) return '';
+    var out = '<span class="skel-peek-num">' + esc(rec.a) + ' → ' + esc(rec.b) +
+              '</span>';
+    for (var i = 0; i < rec.edges.length; i++){
+      out += '<p>' + esc(shorten(L(rec.edges[i][0]), 74)) + ' → ' +
+             esc(shorten(L(rec.edges[i][1]), 74)) + '</p>';
     }
     return out;
   }
-  function escapeHtml(s){
-    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  function markerCard(nid){
+    var meta = SKEL.nodes[nid];
+    if (!meta) return '';
+    var interp = !SKEL.anchors[nid];
+    var head = esc(meta.chunk) + (interp ? ' · a térkép tette hozzá'
+                                         : ' · állítás');
+    var out = '<span class="skel-peek-num">' + head + '</span>' +
+              '<span class="skel-peek-label">' + esc(L(nid)) + '</span>';
+    var par = SKEL.parent[nid];
+    if (par){
+      out += '<span class="skel-peek-role">alátámasztja → ' +
+             esc(shorten(L(par), 80)) + '</span>';
+    }
+    var list = SKEL.anchors[nid] || [];
+    if (list.length){
+      out += '<span class="skel-qlist">';
+      for (var i = 0; i < list.length; i++){
+        var lbl = list[i].fn != null ? '❝ lj. [' + list[i].fn + ']'
+                                     : '❝' + (list.length > 1 ? (i + 1) : '');
+        out += '<button type="button" class="skel-qbtn skel-keep"' +
+               (list[i].ok ? '' : ' disabled') +
+               ' data-skel-qjump="' + esc(nid) + '" data-skel-qi="' + i + '">' +
+               esc(lbl) + '</button>';
+      }
+      out += '</span>';
+    }
+    out += '<span class="skel-actions">' +
+           '<button type="button" class="skel-goto skel-keep" data-skel-travel="' +
+           esc(meta.chunk) + '">→ odaugrás</button></span>';
+    return out;
   }
 
-  /* ---- travel between boxes ---------------------------------------- */
-  function boxOf(chunk){
-    var meta = SKEL.chunks[chunk];
-    return meta ? document.getElementById(meta.box) : null;
-  }
+  /* ---- travel ------------------------------------------------------- */
   function flash(el){
     if (!el) return;
     el.classList.remove('skel-flash');
@@ -781,26 +1649,45 @@ SKEL_JS = r"""
     el.classList.add('skel-flash');
     setTimeout(function(){ el.classList.remove('skel-flash'); }, 1300);
   }
-  function currentChunk(el){
-    if (!el.closest) return null;
-    // a physical section can hold two chunks, so ask the key block first
-    var block = el.closest('[data-skel-chunk]');
-    if (block) return block.getAttribute('data-skel-chunk');
-    var post = el.closest('.skel-post');
-    if (post){
-      var num = post.querySelector('.skel-post-num');
-      if (num) return num.textContent.trim();
-    }
-    return null;
+  function originOf(el){
+    var wrap = el && el.closest ? el.closest('[data-view]') : null;
+    if (!wrap) return null;
+    var v = (wrap.getAttribute('data-view') || '').split(' ')[0];
+    return v || null;
   }
   function travel(chunk, from){
-    var box = boxOf(chunk);
+    var meta = SKEL.chunks[chunk];
+    if (!meta) return;
+    var box = document.getElementById(meta.box);
     if (!box) return;
     closeTip();
     box.scrollIntoView({block: 'start', behavior: 'smooth'});
-    var inner = box.querySelector('.skel-pre-inner') || box;
-    flash(inner);
+    flash(box.querySelector('.skel-pre-inner') || box);
     if (from && from !== chunk) showBack(from);
+  }
+  function openDetail(chunk, scroll){
+    var post = document.getElementById(SKEL.chunks[chunk].post);
+    if (!post) return;
+    var strip = post.querySelector('[data-skel-chunk="' + chunk + '"]');
+    if (!strip) return;
+    var card = strip.querySelector('.skel-card');
+    var detail = strip.querySelector('.skel-detail');
+    if (card && detail && detail.hidden) setExpanded(card, detail, true);
+    if (scroll){
+      closeTip();
+      strip.scrollIntoView({block: 'start', behavior: 'smooth'});
+      flash(strip.querySelector('.skel-restate'));
+    }
+  }
+  // The card IS the collapsed state of the panel, so it steps aside when open.
+  // Focus has to follow it, or a keyboard user is left on a hidden element.
+  function setExpanded(card, detail, open, focus){
+    detail.hidden = !open;
+    card.hidden = open;
+    card.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (!focus) return;
+    var next = open ? detail.querySelector('[data-skel-collapse]') : card;
+    if (next) try { next.focus({preventScroll: true}); } catch (e) { next.focus(); }
   }
   function showBack(chunk){
     backTarget = chunk;
@@ -809,7 +1696,7 @@ SKEL_JS = r"""
   }
   function hideBack(){ backTarget = null; backBar.hidden = true; }
 
-  /* ---- anchor highlight -------------------------------------------- */
+  /* ---- anchor highlight (unchanged behaviour from v1) --------------- */
   function clearMarks(){
     var marks = document.querySelectorAll('mark.skel-hit');
     for (var i = 0; i < marks.length; i++){
@@ -823,7 +1710,6 @@ SKEL_JS = r"""
   function findInNode(node, quote){
     var i = node.data.indexOf(quote);
     if (i >= 0) return [i, i + quote.length];
-    // whitespace-normalised fallback, mapped back to original offsets
     var map = [], norm = '', prevWs = false;
     for (var k = 0; k < node.data.length; k++){
       var ch = node.data[k];
@@ -880,26 +1766,23 @@ SKEL_JS = r"""
     }
     return false;
   }
-  function jump(nodeId){
+  // Always the SAME anchor for the same request: v1's repeated-tap cycling is
+  // gone; a numbered button in the node card is how you reach anchor 2 and 3.
+  function jump(nodeId, index){
     var list = SKEL.anchors[nodeId];
     if (!list || !list.length) return;
-    var usable = [];
-    for (var i = 0; i < list.length; i++) if (list[i].ok) usable.push(list[i]);
-    if (!usable.length) return;
-    var seen = jump.seen || (jump.seen = {});
-    var idx = (seen[nodeId] || 0) % usable.length;
-    seen[nodeId] = idx + 1;
-    var anchor = usable[idx];
+    var anchor = list[index || 0];
+    if (!anchor || !anchor.ok){
+      for (var i = 0; i < list.length && (!anchor || !anchor.ok); i++) anchor = list[i];
+    }
+    if (!anchor || !anchor.ok) return;
     clearMarks();
     var sec = document.getElementById('sec-' + anchor.sec);
     if (!sec) return;
     var article = sec.querySelector('article.orig.lang-en');
     if (!article) return;
     if (article.hidden) showEnglish(sec);
-    // hidden articles measure as zero, so wait for the layout to settle
     requestAnimationFrame(function(){
-      // clear again inside the frame: two taps in quick succession would
-      // otherwise both mark, and the first would survive the second's clear
       clearMarks();
       var mark = markQuote(article, anchor.q);
       if (mark){
@@ -919,89 +1802,201 @@ SKEL_JS = r"""
     });
   }
 
-  /* ---- hover dependency highlight (desktop pointers only) ----------- */
-  var finePointer = window.matchMedia &&
-    window.matchMedia('(hover:hover) and (pointer:fine)').matches;
-  function clearHover(){
-    root.classList.remove('skel-hov');
-    var boxes = document.querySelectorAll('.skel-pre');
-    for (var i = 0; i < boxes.length; i++){
-      boxes[i].classList.remove('skel-self', 'skel-up', 'skel-down');
+  /* ---- map: incident-edge lighting ---------------------------------- */
+  function lightIncident(svg, chunk){
+    dimAll(svg);
+    if (!svg) return;
+    var i, els = svg.querySelectorAll('[data-arc]');
+    for (i = 0; i < els.length; i++){
+      var k = els[i].getAttribute('data-arc').split('>');
+      els[i].classList.toggle('sk-hot', k[0] === chunk || k[1] === chunk);
+    }
+    els = svg.querySelectorAll('[data-fan]');
+    for (i = 0; i < els.length; i++){
+      els[i].classList.toggle('sk-hot',
+        els[i].getAttribute('data-fan') === chunk || chunk === SKEL.roof);
     }
   }
-  function applyHover(box){
-    var chunks = (box.getAttribute('data-skel-box') || '').split(' ');
-    var up = {}, down = {};
-    for (var i = 0; i < chunks.length; i++){
-      (SKEL.up[chunks[i]] || []).forEach(function(c){ up[c] = 1; });
-      (SKEL.down[chunks[i]] || []).forEach(function(c){ down[c] = 1; });
-    }
-    clearHover();
-    root.classList.add('skel-hov');
-    box.classList.add('skel-self');
-    Object.keys(up).forEach(function(c){
-      var b = boxOf(c); if (b && b !== box) b.classList.add('skel-up');
-    });
-    Object.keys(down).forEach(function(c){
-      var b = boxOf(c); if (b && b !== box) b.classList.add('skel-down');
-    });
+  function dimAll(svg){
+    if (!svg) return;
+    var els = svg.querySelectorAll('.sk-hot');
+    for (var i = 0; i < els.length; i++) els[i].classList.remove('sk-hot');
   }
+
+  /* ---- detail rows -------------------------------------------------- */
+  function clearRows(){
+    var els = document.querySelectorAll('.skel-lrow.sk-r-self,.skel-lrow.sk-r-anc,' +
+                                        '.skel-lrow.sk-r-desc');
+    for (var i = 0; i < els.length; i++){
+      els[i].classList.remove('sk-r-self', 'sk-r-anc', 'sk-r-desc');
+    }
+  }
+  function activateRow(row){
+    var lanes = row.parentNode;
+    var rows = lanes.querySelectorAll('.skel-lrow');
+    var self = parseInt(row.getAttribute('data-row'), 10);
+    if (row.classList.contains('sk-r-self')){ clearRows(); return; }
+    clearRows();
+    var parentOf = {}, i;
+    for (i = 0; i < rows.length; i++){
+      var p = rows[i].getAttribute('data-parent');
+      parentOf[i] = p === '' ? null : parseInt(p, 10);
+    }
+    var anc = {}, cur = parentOf[self];
+    while (cur != null){ anc[cur] = 1; cur = parentOf[cur]; }
+    var desc = {};
+    for (i = self + 1; i < rows.length; i++){
+      var q = parentOf[i];
+      if (q === self || desc[q]) desc[i] = 1;
+    }
+    row.classList.add('sk-r-self');
+    for (i = 0; i < rows.length; i++){
+      if (anc[i]) rows[i].classList.add('sk-r-anc');
+      else if (desc[i]) rows[i].classList.add('sk-r-desc');
+    }
+  }
+
+  /* ---- legend ------------------------------------------------------- */
+  function showLegend(){ if (legend) legend.hidden = false; }
+  function hideLegend(){ if (legend) legend.hidden = true; }
 
   /* ---- wiring ------------------------------------------------------- */
   btn.addEventListener('click', function(){ setOn(!on); });
+  if (langPill){
+    langPill.addEventListener('click', function(ev){
+      var b = ev.target.closest && ev.target.closest('[data-skel-lang]');
+      if (b) setLang(b.getAttribute('data-skel-lang'));
+    });
+  }
+
+  // Desktop: hovering a node opens its card after a beat; clicking navigates.
+  // Touch: the first tap opens the card, the second tap on the same node
+  // navigates. Both paths go through the same two functions.
+  function openNode(el, chunk){
+    openTip(el, nodeCard(chunk), 'node:' + chunk);
+    var svg = el.closest ? el.closest('svg.skel-map') : null;
+    if (chunk !== 'thesis') lightIncident(svg, chunk);
+  }
+  function nodeActivate(el, chunk){
+    if (chunk === 'thesis'){ openNode(el, chunk); return; }
+    if (tipShows('node:' + chunk)){ travel(chunk, originOf(el)); return; }
+    openNode(el, chunk);
+  }
+
+  if (finePointer){
+    document.addEventListener('mouseover', function(ev){
+      var t = ev.target;
+      if (!on || !t || !t.closest) return;
+      var hit = t.closest('[data-skel-node]');
+      if (hit){
+        clearTimeout(hoverTimer);
+        hoverTimer = setTimeout(function(){
+          openNode(hit, hit.getAttribute('data-skel-node'));
+        }, 120);
+        return;
+      }
+      var edge = t.closest('[data-arc],[data-fan]');
+      if (edge && edge.closest('svg.skel-map')){
+        clearTimeout(hoverTimer);
+        var key = edge.getAttribute('data-arc');
+        if (!key){
+          var c = edge.getAttribute('data-fan');
+          key = c + '>' + SKEL.roof;
+          if (!SKEL.arcs[key]){
+            var f = SKEL.fans[c];
+            if (f) SKEL.arcs[key] = {a: c, b: SKEL.roof, edges: f};
+          }
+        }
+        openTip(edge, edgeCard(key), 'edge:' + key);
+        edge.classList.add('sk-hot');
+      }
+    });
+    document.addEventListener('mouseout', function(ev){
+      var t = ev.target;
+      if (!t || !t.closest) return;
+      if (t.closest('[data-skel-node],[data-arc],[data-fan]')) clearTimeout(hoverTimer);
+    });
+  }
 
   document.addEventListener('click', function(ev){
     var t = ev.target;
     if (!t || !t.closest) return;
 
-    var expand = t.closest('.skel-expand');
-    if (expand){
-      var tree = document.getElementById(expand.getAttribute('data-skel-expand'));
-      if (tree){
-        var open = tree.hidden;
-        tree.hidden = !open;
-        expand.setAttribute('aria-expanded', open ? 'true' : 'false');
+    var nodeHit = t.closest('[data-skel-node]');
+    if (nodeHit){
+      var chunk = nodeHit.getAttribute('data-skel-node');
+      if (nodeHit.classList.contains('skel-mark')){
+        openTip(nodeHit, markerCard(chunk), 'mark:' + chunk);
+        var row = nodeHit.closest('.skel-lrow');
+        if (row) activateRow(row);
+        return;
       }
+      if (finePointer && nodeHit.closest('svg.skel-map')){
+        if (chunk === 'thesis') openNode(nodeHit, chunk);
+        else travel(chunk, originOf(nodeHit));
+        return;
+      }
+      nodeActivate(nodeHit, chunk);
+      return;
+    }
+    var gloss = t.closest('[data-skel-gloss]');
+    if (gloss){
+      var g = gloss.getAttribute('data-skel-gloss');
+      openTip(gloss, glossCard(g), 'gloss:' + g);
       return;
     }
     var quote = t.closest('.skel-quote');
-    if (quote && !quote.disabled){ jump(quote.getAttribute('data-skel-quote')); return; }
-
-    var gloss = t.closest('.skel-gloss');
-    if (gloss){ openTip(gloss, glossCard(gloss.getAttribute('data-skel-gloss'))); return; }
-
-    var peek = t.closest('[data-skel-peek]');
-    if (peek){
-      var cid = peek.getAttribute('data-skel-peek');
-      var meta = SKEL.chunks[cid];
-      if (meta) openTip(peek, peekCard(cid, meta.label, cid));
+    if (quote && !quote.disabled){ jump(quote.getAttribute('data-skel-quote'), 0); return; }
+    var qbtn = t.closest('[data-skel-qjump]');
+    if (qbtn && !qbtn.disabled){
+      jump(qbtn.getAttribute('data-skel-qjump'),
+           parseInt(qbtn.getAttribute('data-skel-qi'), 10) || 0);
       return;
     }
-    var peekNode = t.closest('[data-skel-peek-node]');
-    if (peekNode){
-      var nid = peekNode.getAttribute('data-skel-peek-node');
-      var nmeta = SKEL.nodes[nid];
-      if (nmeta) openTip(peekNode, peekCard(nmeta.chunk, nmeta.label, null));
+    var card = t.closest('.skel-card');
+    if (card){
+      var detail = document.getElementById('skel-detail-' + card.getAttribute('data-skel-card'));
+      if (detail) setExpanded(card, detail, true, true);
       return;
     }
-    var dot = t.closest('.skel-dot');
-    if (dot){ travel(dot.getAttribute('data-skel-goto'), null); return; }
+    var collapse = t.closest('[data-skel-collapse]');
+    if (collapse){
+      var det = collapse.closest('.skel-detail');
+      var strip = det.parentNode;
+      setExpanded(strip.querySelector('.skel-card'), det, false, true);
+      clearRows();
+      return;
+    }
+    var zoom = t.closest('[data-skel-zoom]');
+    if (zoom){
+      var lanes = zoom.closest('.skel-detail').querySelector('.skel-lanes');
+      var mode = zoom.getAttribute('data-skel-zoom');
+      lanes.classList.toggle('sk-bones', mode === 'bones');
+      var sibs = zoom.parentNode.querySelectorAll('button');
+      for (var i = 0; i < sibs.length; i++) sibs[i].classList.toggle('on', sibs[i] === zoom);
+      return;
+    }
+    if (t.closest('[data-skel-legend]')){ showLegend(); return; }
+    if (t.closest('#skel-legend-x')){ hideLegend(); return; }
 
     var travelBtn = t.closest('[data-skel-travel]');
     if (travelBtn){
-      var to = travelBtn.getAttribute('data-skel-travel');
-      var origin = window.SKEL_LAST_ORIGIN || null;
-      travel(to, origin);
+      travel(travelBtn.getAttribute('data-skel-travel'), window.SKEL_LAST_ORIGIN || null);
       return;
     }
+    var detailBtn = t.closest('[data-skel-detail]');
+    if (detailBtn){ openDetail(detailBtn.getAttribute('data-skel-detail'), true); return; }
+
+    var lrow = t.closest('.skel-lrow');
+    if (lrow){ activateRow(lrow); return; }
   });
 
-  // Remember which box a chunk chip was tapped from, for the single back slot.
+  // Remember which map a card was opened from, for the single back slot.
   document.addEventListener('pointerdown', function(ev){
     var t = ev.target;
     if (!t || !t.closest) return;
-    var chip = t.closest('[data-skel-peek]');
-    if (chip) window.SKEL_LAST_ORIGIN = currentChunk(chip);
+    var origin = originOf(t.closest('[data-skel-node]') || t);
+    if (origin) window.SKEL_LAST_ORIGIN = origin;
   }, true);
 
   // Any pointer press outside a mark, the clear chip or a quote button
@@ -1011,47 +2006,41 @@ SKEL_JS = r"""
     if (clearBar.hidden) return;
     var t = ev.target;
     if (t && t.closest && (t.closest('mark.skel-hit') || t.closest('#skel-clear') ||
-        t.closest('.skel-quote'))) return;
+        t.closest('.skel-quote') || t.closest('[data-skel-qjump]'))) return;
     clearMarks();
   }, true);
 
   document.addEventListener('keydown', function(ev){
     if (ev.key !== 'Escape') return;
+    if (legend && !legend.hidden){ hideLegend(); return; }
     if (!clearBar.hidden) clearMarks();
+    clearRows();
     hideBack();
   });
 
-  clearBtn.addEventListener('click', function(){ clearMarks(); });
+  clearBtn.addEventListener('click', function(){ clearMarks(); clearRows(); });
   backBtn.addEventListener('click', function(){
     if (backTarget){ var to = backTarget; hideBack(); travel(to, null); }
   });
   backX.addEventListener('click', hideBack);
 
-  var legendX = document.getElementById('skel-legend-x');
-  if (legendX){
-    legendX.addEventListener('click', function(){
-      var box = document.getElementById('skel-legend');
-      if (box){ box.hidden = true; box.removeAttribute('data-skel-block'); }
-    });
-  }
-
-  if (finePointer){
-    var boxes = document.querySelectorAll('.skel-pre');
-    for (var i = 0; i < boxes.length; i++){
-      (function(box){
-        box.addEventListener('mouseenter', function(){ if (on) applyHover(box); });
-        box.addEventListener('mouseleave', clearHover);
-      })(boxes[i]);
-    }
-  }
-
   if (tip){
     tip.addEventListener('click', function(ev){
-      var g = ev.target.closest && ev.target.closest('[data-skel-travel]');
-      if (g) travel(g.getAttribute('data-skel-travel'), window.SKEL_LAST_ORIGIN || null);
+      var t = ev.target;
+      if (!t || !t.closest) return;
+      var g = t.closest('[data-skel-travel]');
+      if (g){ travel(g.getAttribute('data-skel-travel'), window.SKEL_LAST_ORIGIN || null); return; }
+      var d = t.closest('[data-skel-detail]');
+      if (d){ openDetail(d.getAttribute('data-skel-detail'), true); return; }
+      var q = t.closest('[data-skel-qjump]');
+      if (q && !q.disabled){
+        jump(q.getAttribute('data-skel-qjump'),
+             parseInt(q.getAttribute('data-skel-qi'), 10) || 0);
+      }
     });
   }
 
+  applyLang();
   setOn(false);
 })();
 """

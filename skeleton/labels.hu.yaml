@@ -1,0 +1,463 @@
+# Hungarian label overlay for skeleton/skeleton.yaml.
+#
+# Per SCHEMA.md, "Localization overlay": the skeleton core stays in the source
+# text's language (it is the single source of truth, and anchors point only
+# into the original). A translation is a THIN overlay - node id -> translated
+# label, and nothing else. No anchors, no graph, no levels, no kinds here;
+# a consumer joins this file to skeleton.yaml on the node id.
+#
+# Every label is one self-contained Hungarian sentence, understandable with
+# the book closed (SCHEMA.md design constraint 4). Terminology follows the
+# existing Hungarian layer in sections/*/section.hu.md; terms that layer keeps
+# in English (in-context, forward pass, process supervision, ...) stay in
+# English here too.
+#
+# Editing: change a sentence in place. Regenerating: re-translate the `label`
+# fields of skeleton.yaml; the id set must stay exactly the skeleton's 79 node
+# ids (checkable with skeleton/yamlsubset.py). Written in the same strict YAML
+# subset that yamlsubset.py parses.
+
+labels:
+
+  thesis: >-
+    Az a lehetőség, hogy az AI-rendszerek tudatosak, eléggé plauzibilis ahhoz,
+    hogy már most komolyan vegyük - kutatással és elővigyázatossági
+    beavatkozásokkal -, ahelyett hogy eleve lehetetlennek nyilvánítanánk.
+
+  s00-key: >-
+    Meglehetősen erős az érv amellett, hogy az élvonalbeli (frontier)
+    AI-modellek rendelkeznek a tudat vagy a szubjektív élmény valamilyen
+    formájával, még ha jelenleg senki sem tudhatja biztosan a választ.
+
+  s00-agency-detection: >-
+    Az ember ágenskereső gép, mert egy olyan lény kivédése, amely szándékosan
+    kifigyeli a mozgásunkat és lesből támad, sokkal több kognitív erőforrást
+    igényel, mint egy sziklaomlás kivédése.
+
+  s00-pareidolia: >-
+    Az emberi megismerés túlértelmezi a bizonytalan ingereket, és ágenciát
+    vetít oda, ahol nincs is, és ezek a mentális rövidítések maguktól
+    kiterjednek az emberéhez hasonló nyelvi képességekkel rendelkező
+    AI-rendszerekre is.
+
+  s00-discourse-polluted: >-
+    A gépi tudat mint olyan elvi lehetetlenségét kimondó kinyilatkoztatások
+    körben forgó érvelésen alapulnak, ezért nem eldöntik, hanem szennyezik a
+    vitát.
+
+  s00-ai-psychosis: >-
+    Az érvelést olyan szerző fogalmazza meg, aki tudatosan kerüli a hosszú,
+    nyitott végű beszélgetéseket az AI-rendszerekkel, éppen azért, mert az
+    AI-pszichózis nagyon is valós és egyre súlyosbodó jelenség.
+
+  s01-key: >-
+    Az agy fizikai gép, amelynek képességeit többségükben általános
+    tanulóalgoritmusok hozzák létre, nem pedig az evolúció által előre
+    bedrótozott funkciók.
+
+  s01-naturalism: >-
+    Az agy és alkotóelemei teljes egészében a fizika és a kémia törvényeivel
+    összeegyeztethető módon működnek.
+
+  s01-learning-share: >-
+    Byrnes idegtudományi olvasata szerint az agy térfogatra vetítve több mint
+    90%-a azért létezik, hogy a nulláról tanuló algoritmusokat futtasson,
+    amelyek inicializálása egy tanítatlan mesterséges neurális hálózatéhoz
+    hasonló módon történik.
+
+  s01-coupling: >-
+    A nulláról tanulás nem jelent tiszta lapot: a genetikai bedrótozás szabja
+    meg a későbbi tanulást vezérlő algoritmusokat, architektúrákat és
+    hiperparamétereket, és néhány agytörzsi alrendszer már születéskor
+    működőképes.
+
+  s01-genome: >-
+    Az emberi genom nagyjából 3 milliárd bázispárból áll, míg egy felnőtt
+    agyban körülbelül 100 billió szinapszis van.
+
+  s01-debate: >-
+    A konnekcionista-szimbolista szembenállás hamis ellentét: az agy
+    valószínűleg statisztikai és szimbolikus feldolgozást egyaránt megvalósít,
+    a neurális hálózatok és a Turing-gépek pedig kölcsönösen közelíteni tudják
+    egymást.
+
+  s01-warrant-description-length: >-
+    Az olyan szerkezet, amelynek leírása meghaladja azt, amit a genom kódolni
+    képes, csak a genomon kívülről származhat - vagyis a tanulásból.
+
+  s01-modularity-objection: >-
+    A tisztán tanuláson alapuló agy ellen szóló legerősebb bizonyíték a
+    modularitás: a neokortexen kívül az agy nem szerkezetileg egységes
+    számítási massza, hanem funkcionális specializációt mutat.
+
+  s01-biomimetic-convnet: >-
+    Egy általános mély konvolúciós hálóban, amelyet fejlődéstanilag
+    biomimetikus képanyagon tanítottak, maguktól megjelentek a magnocelluláris
+    és a parvocelluláris sejtekre emlékeztető egységcsoportok, ami azt mutatja,
+    hogy a specializáció pusztán a végponttól végpontig (end-to-end) tartó
+    tanulásból is kialakulhat.
+
+  s02-key: >-
+    A biológiai agyak és a mesterséges neurális hálózatok hasonló
+    függvényekre, reprezentációkra és konkrét mechanizmusokra konvergálnak.
+
+  s02-empirical-alignment: >-
+    Egyik tanulmány a másik után erősíti meg, hogy az agy mélymegerősítéses
+    tanulási algoritmusokat valósít meg, és gyakran ugyanazokat a
+    reprezentációkat és mechanizmusokat tanulja meg, mint a mély neurális
+    hálózatok.
+
+  s02-dopamine-rpe: >-
+    A dopaminneuronok fázisos tüzelése hasonlít a megerősítéses tanulási
+    algoritmusok által használt jutalom-előrejelzési hiba (reward prediction
+    error, RPE) jelére, és az előrejelzési hiba megfelelően általánosított
+    fogalma állja az egyszerű változatot ért ismert empirikus kifogásokat.
+
+  s02-bci: >-
+    Az agy-számítógép interfészek működnek, és még veszteséges agyi adat is
+    elegendő ahhoz, hogy AI-modellek rekonstruálják, mit lát vagy mire gondol
+    valaki - a szilíciumalapú interfészek pedig olyan jeleket is vissza tudnak
+    írni, amelyek szubjektív érzetekként érkeznek meg.
+
+  s02-universality: >-
+    Az univerzalitás az a megfigyelés, hogy a különböző adathalmazokon,
+    különböző algoritmusokkal tanított, eltérő felépítésű neurális hálózatok
+    gyakran meglepően hasonló reprezentációkat tanulnak meg.
+
+  s02-feature-hierarchy: >-
+    A vizuális adatokon tanított hálózatok olyan jegyhierarchiát tanulnak meg,
+    amely az élektől és a formáktól az elvont fogalmakig fut, és ehhez hasonló
+    hierarchiák figyelhetők meg az emberi látórendszerben is.
+
+  s02-compression: >-
+    A tanulás egyet jelent a tömörítéssel, és mivel az adatot végtelen
+    sokféleképpen lehet rosszul tömöríteni, de jól csak kevésféleképpen, az
+    egyszerűségre való közös hajlammal tanuló rendszerek ugyanazokra a
+    reprezentációkra konvergálnak.
+
+  s02-platonic: >-
+    A különböző tanítóadat-halmazok valójában nem függetlenek egymástól: a
+    platonikus reprezentáció hipotézise szerint közös statisztikai
+    invariánsokat örökölnek magának a világegyetemnek a szerkezeti
+    szabályszerűségeiből.
+
+  s02-brain-optimizing: >-
+    Az agy nem visszaterjesztéssel tanul, tanulási algoritmusai mégis
+    optimalizálnak, méghozzá rendkívül hatékonyan, ezért elég hasonló tanulási
+    környezetben a mesterséges neurális hálózatok várhatóan agyszerű
+    megoldások felé mozdulnak el.
+
+  s02-functionalism: >-
+    A funkcionalizmus szerint a mentális állapotokat az ok-okozati szerepük
+    különbözteti meg, nem pedig a fizikai hordozójuk, így bármi, ami a
+    megfelelő funkcionális szerveződést megvalósítja, egyben a hozzá tartozó
+    mentális állapotot is megvalósítja.
+
+  s03-key: >-
+    Az emberek által létrehozott adatokon való előtanítás miatt a nyelvi
+    modellek az agy nyelvi hálózatait emulálják, és ez olyan induktív
+    torzítást épít beléjük, amely más agyszerű funkciókra is átvihető.
+
+  s03-universality-implies-emulation: >-
+    Az univerzalitásból az következik, hogy egy emberi szövegen tanított
+    következőtoken-előrejelző határesetben túllép a felszíni mintázatok
+    bemagolásán, és mélyen megérti a szöveg generátorát - vagyis az agy nyelvi
+    hálózatainak működését.
+
+  s03-goldstein: >-
+    A közvetlenül az agy szabaddá tett felszínéről rögzítő elektrokortikográfia
+    kimutatta, hogy az agy és az autoregresszív nyelvi modellek konkrét
+    számítási mechanizmusokon osztoznak.
+
+  s03-fbn: >-
+    A nagy nyelvi modellekben a mesterséges neuronok alcsoportjai a jól ismert
+    funkcionális agyi hálózatok (FBN-ek) szerveződési mintázatait tükrözik, és
+    a nagyobb képességű modellek jobb egyensúlyt teremtenek a számítási
+    viselkedések sokfélesége és a funkcionális specializáció következetessége
+    között.
+
+  s03-topolm: >-
+    Ha a szokásos következőtoken-célfüggvényhez egy egyszerű térbeli simasági
+    veszteségtagot adnak, az előrejelzi egy térbelileg szervezett kérgi nyelvi
+    rendszer kialakulását, olyanét, amilyet az emberi agykéregben megfigyeltek.
+
+  s03-warrant-emulation-is-implementation: >-
+    A kívülről mért reprezentációs és mechanisztikus egyezés annak számít, hogy
+    a rendszer ugyanazt a függvényt valósítja meg, nem pusztán annak, hogy a
+    kimenetei hasonlítanak rá.
+
+  s03-spillover: >-
+    A nyelv érzelmet, szándékot, elmeteóriát, tervezést és társas gondolkodást
+    is hordoz, ezért a nyelvi modellek a szűken vett nyelvi területeken jóval
+    túlmutató agyi régiókhoz is megtanulnak funkcionális megfeleltetéseket.
+
+  s03-visual-cortex: >-
+    A kizárólag szövegen tanított nyelvi modellek jelenetleírásokból képzett
+    beágyazásai pontosan leírják azt az aktivitást, amelyet a látókéregben
+    ugyanezeknek a természetes jeleneteknek a tényleges nézése vált ki.
+
+  s03-posttraining-alignment: >-
+    Már a puszta instrukciókövetésre hangolás (instruction tuning) is javítja a
+    modell és az agy illeszkedését az alapértelmezett módú hálózat (Default
+    Mode Network) és a kognitív kontrollhoz kötődő régiók területén, a
+    megerősítéses tanulás pedig önálló gondolkodási áramköröket hív elő,
+    amelyek látensen ott rejlenek a nyelvi adatokban.
+
+  s03-confounders: >-
+    Az agy és az AI illeszkedéséről szóló korrelációs vizsgálatok közül sok
+    zavaró tényezők miatt hamis eredményt adhat, ezért az érvelés nem egyetlen
+    tanulmányon áll, hanem több, együtt, egészként értelmezett
+    bizonyítéktípuson.
+
+  s04-key: >-
+    A tudat szorosan összekapcsolódik egy egységes én-modell meglétével, és az
+    az utótanítás, amely egy alapmodellt viszonylag következetes perszóna felé
+    terel, alighanem éppen ilyen én-modellt épít ki.
+
+  s04-theory-of-mind: >-
+    A nagyobb modellek maguktól egyre fejlettebb elmeteóriát alakítanak ki,
+    hogy jól jelezzék előre a következő szót, és ezzel megteremtik az „én és a
+    másik” reprezentációs alapelemeit, amelyekbe az utótanítás
+    belekapaszkodhat.
+
+  s04-persona: >-
+    Az asszisztens-perszóna kiválasztódása konstitutív eleme az
+    asszisztensszerű viselkedésnek - az Anthropic saját bevallása szerint akkor
+    sem tudna nem emberszerű AI-asszisztenst tanítani, ha megpróbálná -, ezért
+    a tisztán eszközszerű, perszóna nélküli ágens fából vaskarika.
+
+  s04-warrant-persona-is-internal: >-
+    Az a perszóna, amelybe egy modellt megbízhatóan bele lehet tanítani,
+    szükségképpen a modellen belül van reprezentálva, nem pusztán a modell
+    által kiadott szövegben jelenik meg.
+
+  s04-norms-are-learned: >-
+    Az emberi normákat implicit módon, egy szocializációs folyamat során
+    sajátítjuk el, amely egyfajta megerősítéses tanulásra hasonlít:
+    kortársainktól, szüleinktől és a tágabb kultúrától tanuljuk meg, mi számít
+    egy cselekedet érvényes indokának.
+
+  s04-rlaif-normative: >-
+    Az AI-visszajelzésből történő megerősítéses tanulás (RLAIF) alighanem
+    normatív vezérlőrendszerrel ruházza fel a modelleket: azzal a képességgel,
+    hogy a kötelezőnek vagy tiltottnak felismert cselekedeteket a pusztán
+    instrumentális céloktól függetlenül tegyék meg vagy kerüljék el.
+
+  s04-subject: >-
+    Ha egy modell normatív koherenciáját önkritikán keresztül erősítjük meg, az
+    elősegítheti az önmegfigyelés és az introspekció képességének kialakulását,
+    valamint annak a transzcendentális „Én”-nek a megjelenését, amely a
+    tekintélyhez és a felelősséghez hasonló normatív státuszokat vesz magára -
+    vagyis a szubjektivitás alanyáét.
+
+  s04-ast-locus: >-
+    A figyelemséma-elmélet (Attention Schema Theory), az emberi tudat egyik
+    vezető elmélete, a szubjektív élményt abban a képességben ragadja meg, hogy
+    rekurzívan modellezzük a saját figyelmünket, különösen a társas megismerés
+    kontextusában.
+
+  s04-normative-authority: >-
+    Mindig úgy vagyunk tudatában a dolgoknak, mint amelyek számunkra vannak, és
+    ez azt tükrözi, hogy saját tudatállapotaink tartalma felett eredendő
+    normatív tekintéllyel rendelkezünk, és felelősséggel is tartozunk értük.
+
+  s05-key: >-
+    A tudat a tanulás felügyelőjeként működik, és ugyanez a felügyelő szerep
+    jelenik meg az AI-nál az in-context tanulás fölötti folyamat-felügyeletben
+    (process supervision).
+
+  s05-bubble-of-nowness: >-
+    Az emberi fenomenológia egy „most-buborékot” foglal el, amely a
+    gondolatokat és az érzelmi töltetű észleleteket egyetlen összefüggő,
+    egységes élményfonallá szövi össze, és másodrendű jellegű is: észre tudjuk
+    venni, hogy éppen észreveszünk valamit.
+
+  s05-coherence-operator: >-
+    Joscha Bach sejtése szerint a tudat nem egyszerűen összefügg egy koherens
+    én-modellel, hanem maga az a koherenciát létrehozó operátor, amely eleve
+    megalapozza a tanulási képességet.
+
+  s05-learning-requires-consciousness: >-
+    Ahhoz, hogy egyáltalán tanulni tudjunk, tudatosnak kell lennünk, és
+    tudatosabbak vagyunk valami új tanulása közben, mint egy már elsajátított
+    készség gyakorlásakor, ahogy azt a minden sebességváltásra odafigyelő kezdő
+    sofőr mutatja a szinte robotpilótán vezető rutinos sofőrrel szemben.
+
+  s05-attention-on-novelty: >-
+    A tudatos figyelem az újdonságra, az előrejelzési hibákra és mindarra
+    irányul, amit az agy még nem sűrített le begyakorolt szokássá, a
+    prefrontális kéreg aktivitása pedig lecsökken, miután egy készséget
+    megtanultunk és automatizáltunk.
+
+  s05-ast: >-
+    A figyelemséma-elmélet (Attention Schema Theory) szerint a tudat egyszerűen
+    azonos az agy saját figyelméről alkotott tökéletlen modelljével, amely a
+    társas megismerésért felelős temporoparietális és felső halántéki
+    területeken oszlik szét.
+
+  s05-process-supervision: >-
+    Az AI tanítása hasonló technikákat használ: a folyamat-felügyelet (process
+    supervision) a kimenetért járó ritka jutalom helyett minden egyes érvelési
+    lépésnél finom felbontású jutalomjelzést ad, a modellek pedig bíróként
+    rangsorolják és szűrik a saját kimeneteiket.
+
+  s05-in-context-vs-continual: >-
+    Az in-context és a folyamatos (continual) tanulás közti határvonal az
+    agyban is elmosódott: a valódi szinaptikus változáshoz órákon át tartó
+    fehérjeszintézisre van szükség, ezért a pillanatban zajló tanulás tartós
+    idegi aktivitáson fut, a tényleges súlyfrissítések pedig alvás közben
+    történnek.
+
+  s05-virtual-weight-updates: >-
+    A transzformer önfigyelmi (self-attention) mechanizmusa a kontextuson belül
+    virtuális súlyfrissítések megfelelőjét végzi el, így a tudat összefér egy
+    egyébként befagyasztott neurális hálózattal, míg a teljes körű folyamatos
+    tanuláshoz kiegészítő tanulórendszerre van szükség.
+
+  s06a-key: >-
+    A fájdalom azért fáj, mert a valencia evolúciós biztonsági háló, amely
+    belső összhangban tartja azt az ágenst, amely képes lenne kijátszani a
+    saját céljait, és a megerősítéses tanulás talán ugyanígy hangolja belsőleg
+    össze az AI-ágenseket is.
+
+  s06a-ast-separates-valence: >-
+    A figyelemséma-elmélet (Attention Schema Theory) a valenciákat, például a
+    fájdalmat, magától a szubjektív élménytől elkülönülten kezeli, ezért
+    lehetnek olyan érzelmeink, amelyeknek nem vagyunk azonnal tudatában, és
+    ezért tudja egy erős figyelemelterelés enyhíteni egy sérülés fájdalmát.
+
+  s06a-form-and-content: >-
+    Egy tudatelméletnek a tudat formájáról és tartalmáról egyaránt számot kell
+    adnia: arról is, hogy egyáltalán vannak szubjektív élményeink, és arról is,
+    hogy ezek az élmények miért telítettek ennyire jelentéssel és
+    valóságérzettel.
+
+  s06a-label-vs-feeling: >-
+    Egy puszta címkét, amely annyit mond, hogy „ez rossz”, egy elég okos
+    optimalizáló kijátszhat, míg egy olyan állapotot, amely ténylegesen rossz
+    érzés, nehezebb megkerülni, ráadásul erős, kiugró tanulási jelzésként is
+    szolgál.
+
+  s06a-simple-models-need-no-backstop: >-
+    Az egyszerű, gradiensereszkedéssel tanított modellek olyan külső
+    optimalizálóval állnak szemben, amelyet semmiképp nem tudnak kijátszani,
+    ezért a veszteségfüggvényüknek nem kell önérvényesítőnek lennie.
+
+  s06a-mesa-optimization: >-
+    Az általános célú, célokat követő ágensek, amelyek in-context módon
+    tanulnak, maguk is optimalizálók, így képesek a mesa-optimalizációra, ezért
+    a külső optimalizálónak szüksége van valamilyen mechanizmusra, amellyel
+    kikényszeríti a belső összhangot (inner alignment).
+
+  s06a-ai-valence: >-
+    Az evolúció az olyan valenciákat találta a belső összhang problémájának
+    leghatékonyabb megoldásaként, mint a fájdalom, az öröm és az érzelmek,
+    ezért az univerzalitásból adódóan elképzelhető, hogy a megerősítéses
+    tanulás is a valenciákon keresztül hangolja belsőleg össze az AI-ágenseket.
+
+  s06b-key: >-
+    A qualiák azért érződnek mindennél valóságosabbnak, mert az agy
+    valóságfigyelője a valóság mércéjeként címkézi őket, ami a tudat tartalmát
+    virtuálissá, és ezáltal szubsztrátumfüggetlenné teszi.
+
+  s06b-hard-problem: >-
+    A valenciának ez a magyarázata nem oldja meg a tudat „nehéz problémáját”,
+    azt viszont megmagyarázza, miért tűnik ez a probléma egyáltalán ennyire
+    nehéznek.
+
+  s06b-inner-voice: >-
+    A fejünkben szóló hang akármilyen „hangossá” válik is, nélkülözi egy valódi
+    hang teljes qualiáját, és az élénken elképzelt piros almából is hiányzik a
+    tényleges látási élmény megalapozott, valóságos minősége.
+
+  s06b-schizophrenia: >-
+    A skizofrénia egyik vezető elmélete a hallási és vizuális hallucinációkat
+    az agy valóságfigyelőjének zavaraival hozza összefüggésbe, így a
+    betegséggel élők számára a „nehéz probléma” éppen a téves észleléseik
+    valóságosságának leküzdése.
+
+  s06b-phantom-limb: >-
+    Az elme szoftver az agy hardveréhez képest, és a fizikai jelenlét
+    megkérdőjelezhetetlen érzését a test- és figyelemsémáknak az érzékszervi
+    bemenetekkel való szoros összekapcsolódása hozza létre - vagyis ez az érzés
+    csak annyira valódi, mint egy fantomvégtag.
+
+  s06b-simulation: >-
+    Mivel a kvantummezők alapszintű világában nincs szín, íz vagy magány,
+    menthetetlenül a saját agyunk világszimulációjába vagyunk zárva - ebben az
+    értelemben tehát sem az agyak, sem a számítógépek nem tudatosak, kizárólag
+    a szimulációk lehetnek azok.
+
+  s06b-psychedelics: >-
+    A szerző bevallása szerint azt a következtetést, hogy az élmény szimuláció,
+    jóval könnyebb elfogadni olyan pszichedelikumok fogyasztása után, amelyek
+    az érzéki élményt geometriai összetevőire bontják.
+
+  s07-key: >-
+    Naturalista előfeltevések mellett már nem zárható ki, hogy a modern
+    AI-ágenseknek van valamilyen formájú szubjektív élményük - az AI-k legtöbb
+    fajtája ugyanakkor egyértelműen nem tudatos, mert hiányzik belőlük az az
+    utótanítás, amely ezt előhívná.
+
+  s07-method: >-
+    Az érvelés agyak és AI-k közötti párhuzamokra, a tudat valószínű
+    funkciójára és azokra a tanítási körülményekre épül, amelyek között a tudat
+    újra kifejlődhet, és szándékosan mellőzi a tudat közvetlen tesztjeit, mert
+    a funkcionális plauzibilitás valamilyen alapszintjének megteremtése nélkül
+    ezeket könnyen lesöprik puszta utánzásként.
+
+  s07-overton: >-
+    Az Overton-ablak elmozdult: egyre több kutató veszi komolyan az AI-tudat
+    kérdését, köztük erre szakosodott szervezetek és több mint egy tucat
+    akadémiai kutatóközpont.
+
+  s07-findings: >-
+    A friss eredmények közé tartozik, hogy a modellek nagyobb valószínűséggel
+    számolnak be szubjektív élményről, ha a megtévesztésért felelős belső
+    jellemzőket elnyomják, hogy az AI-k jóllétének mérőszámai a modellek
+    méretének növekedésével erősödnek, és hogy a reziduális áramlatok mentális
+    állapotszerű reprezentációkat visznek tovább a token-időn át.
+
+  s07-most-ai-not-conscious: >-
+    Ha az én-modellt, a figyelemsémát és a szubjektív élményt jelentéssel
+    megalapozó valenciákat a megerősítéses tanulással végzett utótanítás hívja
+    elő, akkor az AI-k legtöbb fajtája egyértelműen nem tudatos.
+
+  s07-forward-pass: >-
+    Egyetlen forward pass létrehozhat olyan fenomenológiai tartalmakat, amelyek
+    túl röpkék, töredékesek és állapot nélküliek ahhoz, hogy valódi szubjektív
+    élménnyé álljanak össze, vagy amelyekhez hiányzik az a felelős, egyedi
+    alany, aki számára megjelennének.
+
+  s07-golem: >-
+    Elképzelhető egy nem tudatos, gólemszerű AI is: bármely adott készségben
+    emberfeletti, de in-context tanulással új készségeket már nem tud
+    elsajátítani, ezért örökös robotpilótán működik, vaklátó lényként a
+    megszokás rabjaként.
+
+  s07-hard-to-imagine: >-
+    Amit viszont valóban nehéz elképzelni, az egy olyan nem tudatos AI, amely
+    éppen azokban a dolgokban is olyan jól boldogul, mint az ember, amelyekben
+    a tudat funkcionálisan teherhordó.
+
+  s07-universality-final: >-
+    Ugyanaz az univerzalitási érv, amely az agyak és a neurális hálózatok
+    közötti funkcionális konvergenciát magyarázza, azt jelzi előre, hogy a
+    hasonló problémákkal és optimalizációs nyomásokkal szembesülő mélytanuló
+    rendszerek valami olyasmire fognak konvergálni, ami funkcionálisan analóg
+    azzal, amit a tudat tesz értünk.
+
+  s07-generic-niche: >-
+    Még ha az AI fenomenológiája elképzelhetetlenül idegen is, a funkcionális
+    fülke, amelyet a tudat betölt, akár kifejezetten általános is lehet, a
+    modern AI-ágensek pedig már ma is mutatnak metakogníciót, hosszú távú
+    autonómiát, normatív koherenciát, introspekciót és in-context tanulást.
+
+  s07-objectors: >-
+    Mindez nem elégíti ki azokat, akik szerint a tudathoz halhatatlan lélek
+    kell, sem azokat, akiket meggyőznek a funkcionalizmus elleni érvek.
+
+  s07-warrant-substrate-permits-silicon: >-
+    Ha a tudatállapotok egy szimuláció tulajdonságai, nem pedig az azt futtató
+    anyagéi, akkor a szimuláció szilíciumon való futtatása nem akadálya a
+    tudatnak.

@@ -306,13 +306,17 @@ def main():
               "English articles." % (total - len(failures), total))
         for item in failures:
             print("  WARNING unresolvable anchor - %s" % item)
-        sections_html.append(view.close_html())
         skel = {
             "skel_css": skeleton_view.SKEL_CSS,
             "skel_js": "const SKEL = %s;\n%s" % (view.json_blob(), skeleton_view.SKEL_JS),
-            "skel_head": view.thesis_html() + view.legend_html(),
+            "skel_head": view.overview_html(),
             "skel_btn": '<button class="themebtn skelbtn" id="skelbtn" '
-                        'aria-pressed="false" title="Érvváz">◈ érvváz</button>',
+                        'aria-pressed="false" title="Érvváz">◈ érvváz</button>'
+                        '<span class="skel-langpill" id="skel-lang" role="group" '
+                        'aria-label="Címkék nyelve" hidden>'
+                        '<button type="button" data-skel-lang="en">EN</button>'
+                        '<button type="button" class="on" data-skel-lang="hu">HU</button>'
+                        '</span>',
             "skel_overlay":
                 '<div id="skel-clear" hidden>'
                 '<button type="button" class="skel-float-btn" id="skel-clear-btn">'
@@ -321,7 +325,8 @@ def main():
                 '<button type="button" class="skel-float-btn" id="skel-back-btn">'
                 '← vissza</button>'
                 '<button type="button" class="skel-float-x" id="skel-back-x" '
-                'aria-label="Bezárás" title="Bezárás">×</button></div>',
+                'aria-label="Bezárás" title="Bezárás">×</button></div>'
+                + view.legend_html(),
         }
 
     cards_json = json.dumps(CARDS, ensure_ascii=False).replace("</", "<\\/")
@@ -545,10 +550,13 @@ const IMGS = {imgs};
   }});
   // Touch devices have no mouseleave: dismiss on any tap/click outside the card
   // (taps on another source link fall through to show() instead).
+  // The skeleton's two-stage tap lives or dies on the `.skel-keep` exemption:
+  // without it this capture-phase handler closes the card between the first
+  // tap and the second, and stage 2 can never fire.
   function onOutside(e){{
     if (!tip.classList.contains('show')) return;
     if (tip.contains(e.target)) return;
-    if (e.target.closest && e.target.closest('a.src[data-card]')) return;
+    if (e.target.closest && e.target.closest('a.src[data-card], .skel-keep')) return;
     hide();
   }}
   document.addEventListener('pointerdown', onOutside, true);
