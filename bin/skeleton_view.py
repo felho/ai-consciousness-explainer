@@ -64,25 +64,12 @@ LOCAL_EDGE_TYPES = ("supports", "elaborates", "qualifies", "rebuts")
 # dashed diamond, which says the same thing in the one visual grammar the rest
 # of the graph already uses.
 
-# One sentence per argumentation scheme, shown in the gloss card.
-SCHEME_LABELS = {
-    "analogy": "analógia",
-    "authority": "tekintély",
-    "precaution": "elővigyázatosság",
-}
-SCHEME_GLOSSES = {
-    "analogy": "Analógia: a lépés két dolog hasonlóságán nyugszik, és pontosan "
-               "annyit bír el, amennyire a hasonlóság a lényeges pontokon fennáll.",
-    "authority": "Tekintély: az állítás súlyát egy szakértő vagy forrás állásfoglalása "
-                 "adja, nem a helyben bemutatott bizonyíték.",
-    "precaution": "Elővigyázatosság: nem logikai következtetés — abból, hogy a dolog elég "
-                  "valószínű és a tét nagy, jut oda, hogy már most tenni kell valamit.",
-}
-
-# The is->ought sentence, kept from v1: it is the one thing the thesis capsule
-# has to say that the picture cannot.
-THESIS_NOTE = ("A leíró gerinctől egyetlen lépés vezet a normatív tézisig — "
-               "és ez a lépés nem bizonyítás.")
+# The argumentation schemes' names ("sch-<id>") and their one-sentence glosses
+# ("schg-<id>") live in UI_STRINGS below, with every other string that sits on a
+# card next to a node label. Each sentence carries the scheme's critical
+# question - what the step would have to survive to hold - so a translation has
+# to keep that clause, not just the name. _check_schemes() fails the build if a
+# scheme the map actually uses has no name or no sentence in some language.
 
 # The only strings that follow the label language rather than the page chrome:
 # they sit inside the diagram or on a card next to labels, and a Hungarian
@@ -115,6 +102,18 @@ UI_STRINGS = {
         "mg-fn": "állítás — csak lábjegyzetben él",
         "mg-interp": "kiegészítés — a térkép tette hozzá, a szöveg ezt nem mondja ki",
         "bp-also": "továbbá alátámasztja: %1",
+        "thesis-note": "A leíró gerinctől egyetlen lépés vezet a normatív tézisig — "
+                       "és ez a lépés nem bizonyítás.",
+        "sch-analogy": "analógia",
+        "sch-authority": "tekintély",
+        "sch-precaution": "elővigyázatosság",
+        "schg-analogy": "Analógia: a lépés két dolog hasonlóságán nyugszik, és pontosan "
+                        "annyit bír el, amennyire a hasonlóság a lényeges pontokon fennáll.",
+        "schg-authority": "Tekintély: az állítás súlyát egy szakértő vagy forrás "
+                          "állásfoglalása adja, nem a helyben bemutatott bizonyíték.",
+        "schg-precaution": "Elővigyázatosság: nem logikai következtetés — abból, hogy a "
+                           "dolog elég valószínű és a tét nagy, jut oda, hogy már most "
+                           "tenni kell valamit.",
     },
     "en": {
         "thesis-cap": "THESIS",
@@ -136,6 +135,18 @@ UI_STRINGS = {
         "mg-fn": "claim — lives only in a footnote",
         "mg-interp": "addition — supplied by the map, the text never states it",
         "bp-also": "also supports: %1",
+        "thesis-note": "One step leads from the descriptive backbone to the normative "
+                       "thesis — and that step is not a proof.",
+        "sch-analogy": "analogy",
+        "sch-authority": "authority",
+        "sch-precaution": "precaution",
+        "schg-analogy": "Analogy: the step rests on two things being alike, and holds "
+                        "exactly as far as the likeness holds at the points that matter.",
+        "schg-authority": "Authority: the claim's weight comes from an expert's or a "
+                          "source's stance on it, not from evidence presented here.",
+        "schg-precaution": "Precaution: not a logical inference — it goes from the thing "
+                           "being likely enough and the stakes being high to something "
+                           "having to be done now.",
     },
 }
 
@@ -372,6 +383,7 @@ class SkeletonView(object):
         self._derive()
         self._derive_minimap()
         self._derive_lanes()
+        self._check_schemes()
 
     # ---- labels ---------------------------------------------------------
 
@@ -395,6 +407,34 @@ class SkeletonView(object):
                 "ids (%s). Re-translate the changed `label:` fields, or build "
                 "without the reading aid." % (len(want), "; ".join(parts)))
         return {nid: _tidy(labels_hu[nid]) for nid in want}
+
+    def _schemes_used(self):
+        """Every scheme the page can put a gloss card on: the fan's glyphs, the
+        detail rows' diamonds, and the one on the step into the thesis."""
+        used = {s for s in self.fan.values() if s}
+        for chunk in self.chunks:
+            for m in self.lanes[chunk]["meta"]:
+                if m["row"]["scheme"] and m["depth"]:
+                    used.add(m["row"]["scheme"])
+        used.add((self.thesis_edge or {}).get("scheme") or "precaution")
+        return used
+
+    def _check_schemes(self):
+        """A scheme with no name or no sentence in some language would open a
+        card in the wrong language, or an empty one. Same failure _check_labels()
+        guards against for node labels, so it fails the build the same way."""
+        missing = []
+        for scheme in sorted(self._schemes_used()):
+            for lang in sorted(UI_STRINGS):
+                for prefix in ("sch-", "schg-"):
+                    if not UI_STRINGS[lang].get(prefix + scheme):
+                        missing.append("%s/%s%s" % (lang, prefix, scheme))
+        if missing:
+            raise SkeletonError(
+                "argumentation schemes the map uses but UI_STRINGS does not "
+                "carry: %s. Add the name and the gloss sentence (keep the "
+                "scheme's critical question) to UI_STRINGS in "
+                "bin/skeleton_view.py." % ", ".join(missing))
 
     # ---- derivations ---------------------------------------------------
 
@@ -1197,7 +1237,8 @@ class SkeletonView(object):
         return ('<button type="button" class="skel-dia skel-keep" data-skel-gloss="%s" '
                 'style="left:%spx" aria-label="%s"></button>'
                 % (_esc(m["row"]["scheme"]), _n(dx - 11),
-                   _esc(SCHEME_LABELS.get(m["row"]["scheme"], m["row"]["scheme"]))))
+                   _esc(UI_STRINGS["hu"].get("sch-" + m["row"]["scheme"],
+                                             m["row"]["scheme"]))))
 
     # ---- v1 nested list, kept as the below-700px fallback ----------------
 
@@ -1365,8 +1406,6 @@ class SkeletonView(object):
             "nodes": nodes,
             "parent": parent,
             "anchors": self.anchor_index,
-            "glosses": SCHEME_GLOSSES,
-            "schemeNames": SCHEME_LABELS,
             "arcs": arcs,
             "fans": fans,
             "labels": {"en": self.label_en, "hu": self.label_hu},
@@ -1377,7 +1416,7 @@ class SkeletonView(object):
             # Each gloss carries the sign it explains, drawn by the same code
             # that draws the row - see marker_ink().
             "signs": SIGNS,
-            "thesis": {"id": self.thesis["id"], "note": THESIS_NOTE,
+            "thesis": {"id": self.thesis["id"],
                        "scheme": (self.thesis_edge or {}).get("scheme")},
         }
         return json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
@@ -1891,17 +1930,20 @@ SKEL_JS = r"""
     return '<span class="sk-g">' + (sign || '') +
            '<span class="sk-gtxt">' + esc(text) + '</span></span>';
   }
+  // Scheme names and sentences are UI strings like every other card string, so
+  // they follow the EN|HU pill rather than sitting in one language beside a
+  // label that switches.
+  function schemeName(key){ return U('sch-' + key) || key; }
   function glossCard(key){
-    return signCard(SKEL.signs.scheme, SKEL.glosses[key] || '');
+    return signCard(SKEL.signs.scheme, U('schg-' + key));
   }
   function nodeCard(chunk){
     if (chunk === 'thesis'){
       return '<span class="skel-peek-num">' + esc(U('thesis-cap')) + '</span>' +
              '<span class="skel-peek-label">' + esc(L(SKEL.thesis.id)) + '</span>' +
-             '<span class="skel-peek-note">' + esc(SKEL.thesis.note) + '</span>' +
+             '<span class="skel-peek-note">' + esc(U('thesis-note')) + '</span>' +
              (SKEL.thesis.scheme ? '<span class="skel-word">' +
-               esc(SKEL.schemeNames[SKEL.thesis.scheme] || SKEL.thesis.scheme) +
-               '</span>' : '');
+               esc(schemeName(SKEL.thesis.scheme)) + '</span>' : '');
     }
     var meta = SKEL.chunks[chunk];
     if (!meta) return '';
@@ -1909,8 +1951,7 @@ SKEL_JS = r"""
               esc(T('n-claims', [meta.d1])) + '</span>' +
               '<span class="skel-peek-label">' + esc(L(meta.key)) + '</span>';
     if (meta.scheme){
-      out += '<span class="skel-word">' +
-             esc(SKEL.schemeNames[meta.scheme] || meta.scheme) + '</span>';
+      out += '<span class="skel-word">' + esc(schemeName(meta.scheme)) + '</span>';
     }
     // Both rows name the direction of dependence, from this chunk's point of
     // view: `up` is what it rests on, `down` is what rests on it. "ezt
