@@ -512,6 +512,8 @@ const IMGS = {imgs};
     if (!CARDS[id]) return;
     clearTimeout(hideTimer);
     if (curr !== el){{
+      // drop any borrowed variant, or a source card would inherit its styling
+      tip.className = '';
       tip.innerHTML = '<button class="tip-close" aria-label="Bezárás" title="Bezárás">×</button>' + CARDS[id];
       curr = el;
     }}
@@ -534,11 +536,14 @@ const IMGS = {imgs};
   }});
   // Minimal bridge so other features (the argument skeleton) can borrow this
   // one hover card instead of building a second overlay. Resetting `curr` is
-  // what keeps the source-link cards correct after a borrowed use.
+  // what keeps the source-link cards correct after a borrowed use. `variant` is
+  // an optional class for a borrowed shape (the skeleton's compact gloss); it
+  // lives on the element, so it is cleared by the next open on either path.
   window.SKEL_TIP = {{
-    open: function(el, inner){{
+    open: function(el, inner, variant){{
       clearTimeout(hideTimer);
       curr = null;
+      tip.className = variant || '';
       tip.innerHTML = '<button class="tip-close" aria-label="Bezárás" title="Bezárás">×</button>' + inner;
       place(el);
     }},

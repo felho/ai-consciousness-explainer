@@ -139,11 +139,6 @@ UI_STRINGS = {
     },
 }
 
-# The glyph each marker gloss is about, keyed by that gloss. The gloss card's
-# header is the SYMBOL, so the reader can match what they tapped against what
-# the sentence explains.
-MARK_GLYPHS = {"mg-key": "⬤", "mg-anchored": "●", "mg-anchored-n": "●",
-               "mg-fn": "●", "mg-interp": "◇"}
 
 _TAG_RE = re.compile(r"<[^>]*>")
 _WS_RE = re.compile(r"\s+")
@@ -213,6 +208,69 @@ def phys_section(chunk):
 
 
 # --------------------------------------------------------------------------
+# the marker vocabulary, drawn once
+# --------------------------------------------------------------------------
+
+def marker_ink(kind, x, y):
+    """The SVG ink for one marker kind, centred on (x, y).
+
+    The lane row draws its marker with this and the gloss card's sign is built
+    from it, so "this explains THAT sign" holds by construction: there is no
+    second place where a glyph could drift away from the one on the row.
+    """
+    if kind == "key":
+        return ('<circle class="sk-mkey-ring" cx="%s" cy="%s" r="8"/>'
+                '<circle class="sk-mkey" cx="%s" cy="%s" r="6"/>'
+                % (_n(x), _n(y), _n(x), _n(y)))
+    if kind == "interp":
+        return ('<path class="sk-minterp" d="M%s %s l6 6 l-6 6 l-6 -6 Z"/>'
+                % (_n(x), _n(y - 6)))
+    ink = '<circle class="sk-mdot" cx="%s" cy="%s" r="4.5"/>' % (_n(x), _n(y))
+    if kind == "fn":
+        ink += ('<path class="sk-mfn" d="M%s %s L%s %s"/>'
+                % (_n(x - 3.5), _n(y + 8.5), _n(x + 3.5), _n(y + 8.5)))
+    return ink
+
+
+# The gloss card's sign: a small standalone SVG, sized so the widest glyph (the
+# key ring) and the lowest one (the footnote dash) both fit.
+SIGN_W, SIGN_H, SIGN_CX, SIGN_CY = 22, 24, 11, 10
+
+
+def _sign(inner):
+    return ('<svg class="sk-sign" viewBox="0 0 %d %d" width="%d" height="%d" '
+            'aria-hidden="true" focusable="false">%s</svg>'
+            % (SIGN_W, SIGN_H, SIGN_W, SIGN_H, inner))
+
+
+def _build_signs():
+    """gloss key -> the sign that gloss explains, as drawn on the row."""
+    cx, cy = SIGN_CX, SIGN_CY
+    marks = {k: _sign(marker_ink(k, cx, cy))
+             for k in ("key", "anchored", "fn", "interp")}
+    return {
+        "mg-key": marks["key"],
+        "mg-anchored": marks["anchored"],
+        "mg-anchored-n": marks["anchored"],
+        "mg-fn": marks["fn"],
+        "mg-interp": marks["interp"],
+        "scheme": _sign('<path class="sk-scheme" d="M%d %d l5 5 l-5 5 l-5 -5 Z"/>'
+                        % (cx, cy - 5)),
+        # the bypass's own idiom, drawn the way the row draws it: a dashed run
+        # in its own band, ending in an up-arrow on the claim it also supports.
+        # Sat one band lower than the other signs, which put their ink around
+        # SIGN_CY; the run and arrow are placed so their combined mass lands
+        # there too, or the sign reads as slipping off the first text line.
+        "bypass": _sign('<path class="sk-ed sk-ed-bypass" d="M2 13 L15 13"/>'
+                        '<path class="sk-term sk-term-bypass" '
+                        'd="M15 8 L12.5 13 L17.5 13 Z"/>'),
+    }
+
+
+SIGNS = _build_signs()
+
+
+# --------------------------------------------------------------------------
 # minimap geometry, in user units of the 760x252 viewBox
 # --------------------------------------------------------------------------
 
@@ -241,6 +299,20 @@ def _cell_cx(i):
 # the tree.
 LANE_X0, LANE_PITCH, BYPASS_X = 30, 26, 10
 MARK_Y, HEAD_H = 14, 40
+# The bypass gets a band of its own, BYPASS_DY below the tree's elbow line.
+# v2.2 drew it AT MARK_Y, which put two different edges on one line: on the one
+# row that carries both a scheme diamond and a bypass endpoint, the diamond's
+# opaque fill landed exactly on the bypass arrowhead and swallowed it, so the
+# bypass arrived headless and the diamond read as its terminal ornament. The
+# sign belongs to the solid elbow; separating the lines is what says so.
+# The band sits below EVERY glyph the elbow line carries: the diamond's lowest
+# point is MARK_Y+5 and the key ring's is MARK_Y+8, so at MARK_Y+12 the bypass
+# and its arrowhead cross nothing and hide nothing.
+BYPASS_DY = 12
+BYPASS_Y = MARK_Y + BYPASS_DY
+# The bypass turns toward the row this far left of the marker - right of the
+# diamond (which ends at x-8) and left of the row's own child lane (at x).
+BYPASS_TURN = 6
 THUMB_W, THUMB_PITCH, THUMB_LANE, THUMB_PAD = 124, 6, 9, 6
 
 
@@ -975,7 +1047,6 @@ class SkeletonView(object):
     def _head_svg(self, chunk, m):
         """The fixed-height head layer of one row: elbow, terminal, marker, diamond."""
         gut = self.lanes[chunk]["gutter"]
-        node = self.by_id[m["row"]["id"]]
         etype = m["row"]["etype"] or "supports"
         x, d = m["x"], m["depth"]
         out = ['<svg class="skel-lhead" viewBox="0 0 %d %d" width="%d" height="%d" '
@@ -995,37 +1066,33 @@ class SkeletonView(object):
 
         # The bypass keeps its own ink vocabulary (sk-*-bypass) so it can be held
         # faint by default and lit as one whole edge - across all three of the
-        # rows that draw parts of it - when an endpoint row goes live.
+        # rows that draw parts of it - when an endpoint row goes live. It also
+        # keeps its own BAND: it runs BYPASS_DY below the elbow line and turns
+        # into the marker from lower-left, so it crosses no other edge and hides
+        # no other sign. Its arrowhead is the same shape the tree's terminals
+        # use, which is what makes "this arrow lands on that claim" readable.
         role, bp = m["bypass"], m["bp"]
+        turn = x - BYPASS_TURN
         if role and role.startswith("start"):
-            out.append('<path class="sk-ed sk-ed-bypass" data-bp="%d" d="M%s %d L%d %d"/>'
-                       % (bp, _n(x), MARK_Y, BYPASS_X, MARK_Y))
+            out.append('<path class="sk-ed sk-ed-bypass" data-bp="%d" '
+                       'd="M%s %d L%s %d L%d %d"/>'
+                       % (bp, _n(x), MARK_Y, _n(turn), BYPASS_Y, BYPASS_X, BYPASS_Y))
         elif role and role.startswith("end"):
             out.append('<path class="sk-ed sk-ed-bypass" data-bp="%d" d="M%d %d L%s %d"/>'
-                       % (bp, BYPASS_X, MARK_Y, _n(x - 8), MARK_Y))
+                       % (bp, BYPASS_X, BYPASS_Y, _n(turn), BYPASS_Y))
+            # the same 5x5 up-arrow the tree's terminals use, so "this edge
+            # lands on this claim" reads the same way everywhere
             out.append('<path class="sk-term sk-term-bypass" data-bp="%d" '
-                       'd="M%s %d L%s %s L%s %s Z"/>'
-                       % (bp, _n(x - 7), MARK_Y, _n(x - 12), _n(MARK_Y - 2.5),
-                          _n(x - 12), _n(MARK_Y + 2.5)))
+                       'd="M%s %d L%s %d L%s %d Z"/>'
+                       % (bp, _n(turn), BYPASS_Y - 5, _n(turn - 2.5), BYPASS_Y,
+                          _n(turn + 2.5), BYPASS_Y))
 
         if m["row"]["scheme"] and d:
             dx = LANE_X0 + LANE_PITCH * (d - 1) + LANE_PITCH / 2.0
             out.append('<path class="sk-scheme" d="M%s %s l5 5 l-5 5 l-5 -5 Z"/>'
                        % (_n(dx), MARK_Y - 5))
 
-        if m["i"] == 0:
-            out.append('<circle class="sk-mkey-ring" cx="%s" cy="%d" r="8"/>'
-                       '<circle class="sk-mkey" cx="%s" cy="%d" r="6"/>'
-                       % (_n(x), MARK_Y, _n(x), MARK_Y))
-        elif node.get("interpolated") is True:
-            out.append('<path class="sk-minterp" d="M%s %s l6 6 l-6 6 l-6 -6 Z"/>'
-                       % (_n(x), MARK_Y - 6))
-        else:
-            out.append('<circle class="sk-mdot" cx="%s" cy="%d" r="4.5"/>'
-                       % (_n(x), MARK_Y))
-            if self.footnote_only(m["row"]["id"]):
-                out.append('<path class="sk-mfn" d="M%s %s L%s %s"/>'
-                           % (_n(x - 3.5), MARK_Y + 8.5, _n(x + 3.5), MARK_Y + 8.5))
+        out.append(marker_ink(self._mark_kind(m), x, MARK_Y))
         out.append("</svg>")
         return "".join(out)
 
@@ -1041,23 +1108,29 @@ class SkeletonView(object):
                 'title="%s" aria-label="%s"%s>❝%s</button>'
                 % (_esc(nid), _esc(title), _esc(title), disabled, count))
 
-    def _mark_gloss(self, m):
-        """Which marker glyph this row draws, as a gloss key plus its arguments.
+    def _mark_kind(self, m):
+        """Which of the four marker kinds this row draws.
 
-        The four kinds are exactly the four branches of _head_svg()'s marker
-        block, so the gloss can never describe a glyph the row does not draw.
+        Single source of truth: _head_svg() draws through marker_ink() with this
+        kind, the gloss picks its sentence from it, and the gloss card's sign is
+        marker_ink() again. A row cannot draw one glyph and explain another.
         """
         nid = m["row"]["id"]
         if m["i"] == 0:
-            return "mg-key", []
+            return "key"
         if self.by_id[nid].get("interpolated") is True:
-            return "mg-interp", []
+            return "interp"
         if self.footnote_only(nid):
-            return "mg-fn", []
-        count = len(self.anchor_index.get(nid, []))
-        if count > 1:
-            return "mg-anchored-n", [count]
-        return "mg-anchored", []
+            return "fn"
+        return "anchored"
+
+    def _mark_gloss(self, m):
+        """The row's marker gloss, as a key plus its positional arguments."""
+        kind = self._mark_kind(m)
+        if kind != "anchored":
+            return "mg-" + kind, []
+        count = len(self.anchor_index.get(m["row"]["id"], []))
+        return ("mg-anchored-n", [count]) if count > 1 else ("mg-anchored", [])
 
     def _lane_rows_html(self, chunk):
         lane = self.lanes[chunk]
@@ -1086,12 +1159,14 @@ class SkeletonView(object):
                 if role != "mid":
                     # A gloss target over the stub that leaves the marker, on
                     # both endpoint rows: a dashed line into the far left gutter
-                    # says nothing on its own about what it feeds.
+                    # says nothing on its own about what it feeds. It spans the
+                    # gutter lane through to just past the arrowhead at
+                    # x - BYPASS_TURN, so every pixel of the stub answers.
                     bpx = ('<button type="button" class="skel-bpx skel-keep" '
                            'data-skel-bp="%s" style="left:%dpx;width:%dpx" '
                            'aria-label="%s"></button>'
                            % (_esc(m["bp_dst"]), BYPASS_X - 11,
-                              max(24, m["x"] - BYPASS_X + 3),
+                              max(24, m["x"] - BYPASS_TURN + 15 - BYPASS_X),
                               _esc(_fmt(UI_STRINGS["hu"]["bp-also"],
                                         [shorten(self.label_hu[m["bp_dst"]], 74)]))))
             gkey, gargs = self._mark_gloss(m)
@@ -1109,8 +1184,7 @@ class SkeletonView(object):
                    (' data-i18n-args="%s"' % _esc("|".join(str(a) for a in gargs)))
                    if gargs else "",
                    m["x"] - 13,
-                   _esc("%s — %s" % (MARK_GLYPHS[gkey],
-                                     _fmt(UI_STRINGS["hu"][gkey], gargs))),
+                   _esc(_fmt(UI_STRINGS["hu"][gkey], gargs)),
                    self._scheme_hit(chunk, m), bpx, verticals,
                    self._head_svg(chunk, m),
                    _esc(nid), _esc(self.label_hu[nid]), self._quote_btn(nid)))
@@ -1300,7 +1374,9 @@ class SkeletonView(object):
             # The lane grid, so the JS can name a run's column from a row's depth
             # instead of re-deriving the geometry it was handed.
             "lane": [LANE_X0, LANE_PITCH],
-            "markGlyphs": MARK_GLYPHS,
+            # Each gloss carries the sign it explains, drawn by the same code
+            # that draws the row - see marker_ink().
+            "signs": SIGNS,
             "thesis": {"id": self.thesis["id"], "note": THESIS_NOTE,
                        "scheme": (self.thesis_edge or {}).get("scheme")},
         }
@@ -1331,6 +1407,7 @@ SKEL_CSS = r"""
 :root{
   --sk-line:color-mix(in srgb,var(--rule) 55%,var(--muted));
   --sk-mark:14px;
+  --sk-bpy:26px;   /* the bypass's own band; mirrors BYPASS_Y in the builder */
 }
 .skel-overview,.skel-pre,.skel-post,.skel-legend{
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
@@ -1488,8 +1565,9 @@ svg.skel-thumb{flex:0 0 auto;width:124px;height:auto;max-height:86px}
 /* the three parts of one parent->child run; see _derive_lanes() */
 .skel-lane.sk-l-up{bottom:auto;height:var(--sk-mark)}
 .skel-lane.sk-l-down{top:var(--sk-mark)}
-.skel-lane.sk-bp-down{top:var(--sk-mark);bottom:0}
-.skel-lane.sk-bp-up{top:0;height:var(--sk-mark)}
+/* The gutter lane meets the stub in the bypass's band, not on the elbow line. */
+.skel-lane.sk-bp-down{top:var(--sk-bpy);bottom:0}
+.skel-lane.sk-bp-up{top:0;height:var(--sk-bpy)}
 .skel-lane.sk-bp-mid{top:0;bottom:0}
 .skel-lane.sk-bp-down,.skel-lane.sk-bp-up,.skel-lane.sk-bp-mid{
   background:repeating-linear-gradient(to bottom,var(--sk-line) 0 2px,transparent 2px 4px)}
@@ -1504,8 +1582,11 @@ svg.skel-thumb{flex:0 0 auto;width:124px;height:auto;max-height:86px}
 .sk-term-bypass.sk-bp-on{opacity:1;fill:var(--accent)}
 .skel-lane.sk-bp-on{opacity:1;
   background:repeating-linear-gradient(to bottom,var(--accent) 0 2px,transparent 2px 4px)}
-.skel-bpx{position:absolute;top:calc(var(--sk-mark) - 13px);height:26px;border:0;
-  background:transparent;padding:0;cursor:help;z-index:1;border-radius:6px}
+/* Confined to the bypass's own band, where no other glyph reaches - so it can
+   sit ON TOP without ever stealing a pixel that belongs to the marker or the
+   diamond, and the stub answers for its whole length. */
+.skel-bpx{position:absolute;top:calc(var(--sk-bpy) - 7px);height:20px;border:0;
+  background:transparent;padding:0;cursor:help;z-index:4;border-radius:6px}
 svg.skel-lhead{position:absolute;left:0;top:0;pointer-events:none;overflow:visible}
 .sk-ed{fill:none;stroke:var(--sk-line);stroke-width:1.5}
 .sk-ed-elaborates{stroke-width:1;opacity:.35}
@@ -1522,11 +1603,24 @@ svg.skel-lhead{position:absolute;left:0;top:0;pointer-events:none;overflow:visib
 .sk-mkey-ring{fill:none;stroke:var(--accent);stroke-width:2;opacity:.45}
 .sk-minterp{fill:var(--bg);stroke:var(--muted);stroke-width:1.5;stroke-dasharray:2.5 2}
 .sk-mfn{stroke:var(--muted);stroke-width:1.4}
+/* Three affordances share this strip of row, and which one answers must follow
+   from WHICH VISUAL the pointer is on, not from paint order. So they stack
+   smallest-and-innermost first - diamond over marker over bypass stub - and the
+   diamond's box stops dead at x-8, the left edge of the marker's widest glyph
+   (the key ring). Before this the marker's 26px box started at the diamond's
+   CENTRE and the stub's box ran under all of it, so the diamond's own pixels
+   answered with the marker's gloss on the right half and the bypass's on the
+   left, and its own gloss was only reachable in a 6px strip beside it. */
 .skel-mark{position:absolute;top:calc(var(--sk-mark) - 15px);width:26px;height:30px;
   border:0;background:transparent;padding:0;cursor:pointer;z-index:2;border-radius:6px}
 .skel-mark:focus-visible{outline:2px solid var(--accent);outline-offset:0}
-.skel-dia{position:absolute;top:calc(var(--sk-mark) - 13px);width:22px;height:26px;
-  border:0;background:transparent;padding:0;cursor:help;z-index:1;border-radius:6px}
+/* 17px, not 16: the box is left-edge inclusive and right-edge exclusive, so 16
+   would leave the diamond's own right vertex (and its 1.2px stroke) to the
+   marker. It still stops 2.5px short of the dot, and a key row - the only
+   marker wider than the dot - never carries a diamond. */
+.skel-dia{position:absolute;top:calc(var(--sk-mark) - 13px);width:17px;height:26px;
+  border:0;background:transparent;padding:0;cursor:help;z-index:3;border-radius:6px}
+.skel-dia:focus-visible,.skel-bpx:focus-visible{outline:2px solid var(--accent)}
 .skel-lanes.sk-bones .skel-llabel{display:-webkit-box;-webkit-line-clamp:1;
   line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
 .skel-lanes.sk-bones .skel-lrow{min-height:40px}
@@ -1635,6 +1729,23 @@ mark.skel-hit{background:color-mix(in srgb,var(--accent) 26%,transparent);
 #tip .skel-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 #tip .skel-word{display:inline-flex;align-items:center;min-height:24px;padding:2px 9px;
   border:1px solid var(--rule);border-radius:12px;color:var(--muted);font-size:12px}
+/* ---------- gloss tooltip ---------- */
+/* A gloss says one thing about one mark. It gets a tooltip, not the full card
+   chrome the source-link and chunk cards need: sign, sentence, and a × small
+   enough to ride the same line. */
+#tip.sk-mini{display:flex;align-items:flex-start;gap:9px;max-width:320px;
+  padding:8px 10px;font-size:13px;line-height:1.45;border-radius:9px;
+  box-shadow:0 6px 18px rgba(0,0,0,.2)}
+#tip.sk-mini .tip-close{order:2;position:static;float:none;margin:0;padding:0;
+  border:0;background:transparent;width:18px;height:18px;font-size:15px;
+  line-height:1;flex:0 0 auto}
+#tip.sk-mini .sk-g{order:1;display:flex;align-items:flex-start;gap:9px;min-width:0}
+#tip.sk-mini .sk-gtxt{min-width:0}
+/* The sign is the ROW's ink, drawn by the same builder - so it cannot drift
+   from the mark it explains. It is shown at full strength even where the row
+   holds that ink faint, because here it is the subject, not the background. */
+svg.sk-sign{flex:0 0 auto;width:22px;height:24px;overflow:visible}
+.sk-sign .sk-ed-bypass,.sk-sign .sk-term-bypass{opacity:1}
 /* the ervvaz toggle shares .themebtn's look; only the on-state differs */
 .skelbtn.on{background:var(--accent);color:var(--bg);border-color:var(--accent)}
 .skel-langpill{display:inline-flex;border:1px solid var(--rule);border-radius:20px;
@@ -1749,10 +1860,10 @@ SKEL_JS = r"""
   function hasContent(inner){
     return !!inner && String(inner).replace(/<[^>]*>/g, '').trim() !== '';
   }
-  function openTip(el, inner, key){
+  function openTip(el, inner, key, variant){
     if (!hasContent(inner)){ closeTip(); return false; }
     cardKey = key || null;
-    if (window.SKEL_TIP) window.SKEL_TIP.open(el, inner);
+    if (window.SKEL_TIP) window.SKEL_TIP.open(el, inner, variant);
     return true;
   }
   function closeTip(){ cardKey = null; if (window.SKEL_TIP) window.SKEL_TIP.close(); }
@@ -1771,10 +1882,17 @@ SKEL_JS = r"""
     }
     return out + '</span>';
   }
+  // Every gloss has the same two parts: the SIGN it is about, drawn by the same
+  // builder that drew it on the row, and one sentence. The sign replaces v2.2's
+  // text-character header, which could not show the footnote-only mark's
+  // underline at all and so left "this explains THAT" to the reader's guess.
+  function signCard(sign, text){
+    if (!text) return '';
+    return '<span class="sk-g">' + (sign || '') +
+           '<span class="sk-gtxt">' + esc(text) + '</span></span>';
+  }
   function glossCard(key){
-    var name = SKEL.schemeNames[key] || key;
-    return '<span class="skel-peek-num">' + esc(name) + '</span><p>' +
-           esc(SKEL.glosses[key] || '') + '</p>';
+    return signCard(SKEL.signs.scheme, SKEL.glosses[key] || '');
   }
   function nodeCard(chunk){
     if (chunk === 'thesis'){
@@ -1823,18 +1941,14 @@ SKEL_JS = r"""
   // away. It is gone. A marker now says only what its GLYPH means, in the same
   // gloss the scheme diamond has always used; the row itself says the rest.
   function markGlossCard(key, args){
-    var text = T(key, args);
-    if (!text) return '';
-    return '<span class="skel-peek-num">' + esc(SKEL.markGlyphs[key] || '') +
-           '</span><p>' + esc(text) + '</p>';
+    return signCard(SKEL.signs[key], T(key, args));
   }
   // A second parent: the one edge whose meaning the picture cannot carry, since
   // its target sits rows away in a lane of its own.
   function bypassCard(nid){
     var label = L(nid);
     if (!label) return '';
-    return '<span class="skel-peek-num">↗</span><p>' +
-           esc(T('bp-also', [shorten(label, 74)])) + '</p>';
+    return signCard(SKEL.signs.bypass, T('bp-also', [shorten(label, 74)]));
   }
   // The three gloss families share one shape, so they share one lookup: the
   // attribute an element carries decides which sentence it gets.
@@ -2181,7 +2295,9 @@ SKEL_JS = r"""
       if (gl){
         clearTimeout(hoverTimer);
         var g = glossOf(gl);
-        if (g) hoverTimer = setTimeout(function(){ openTip(gl, g[0], g[1]); }, 120);
+        if (g) hoverTimer = setTimeout(function(){
+          openTip(gl, g[0], g[1], 'sk-mini');
+        }, 120);
         return;
       }
       var edge = t.closest('[data-arc],[data-fan]');
@@ -2217,7 +2333,7 @@ SKEL_JS = r"""
     var gl = t.closest(GLOSS_SEL);
     if (gl){
       var g = glossOf(gl);
-      if (g) openTip(gl, g[0], g[1]);
+      if (g) openTip(gl, g[0], g[1], 'sk-mini');
       // The marker is still the row's own affordance, so it keeps highlighting
       // the row; that, plus keyboard focus, is all it does now.
       if (gl.classList.contains('skel-mark')){
