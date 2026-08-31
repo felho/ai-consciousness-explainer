@@ -1,0 +1,1423 @@
+# Full reasoning skeleton of "Time to Take AI Consciousness Seriously",
+# mapped against SCHEMA.md v0. Written to be readable by skeleton/validate.py,
+# which parses a strict regular subset of YAML (no PyYAML in this environment).
+#
+# Conventions used here, so a reader can reproduce them:
+#
+# * Node ids: <chunk>-<slug>; the single level-0 node is `thesis`.
+# * VIRTUAL CHUNKS (R2 plan B). Section 06 failed the R2 stress protocol 3:0
+#   (see the comment above s06a-key), so it is mapped as two virtual chunks,
+#   "06a" and "06b". A virtual chunk id is the physical section id plus a
+#   lowercase letter. text.sections lists the chunks in reading order, in
+#   place of the physical section, and R2 is checked per chunk. Anchors keep
+#   naming the PHYSICAL section ("06"), because that is the file R4 checks
+#   the quote against: node.section is the chunk, anchor.section is the file.
+# * The level-0 thesis is given section "00" (rather than the "" the schema
+#   permits for a global thesis): it is stated in section 00 and anchored
+#   there, and nothing in R1-R7 needs it to be section-less.
+#
+# Quality findings recorded in comments below: the section-06 split, the R2
+# verdicts on 02/04/07, the D1 overload, and the one place where R6 leaves no
+# slot for a node (the is->ought bridge into the thesis).
+
+text:
+  title: "Time to Take AI Consciousness Seriously"
+  source: "https://www.secondbest.ca/p/time-to-take-ai-consciousness-seriously"
+  sections: ["00", "01", "02", "03", "04", "05", "06a", "06b", "07"]
+
+nodes:
+
+  # ---------------------------------------------------------------- thesis --
+  # Thesis selection (SCHEMA.md): the NORMATIVE claim is the thesis; the
+  # descriptive backbone (s00-key) is its chief supporting claim.
+  #
+  # The is->ought bridge is carried at explicitness level 2 (`scheme` on the
+  # s00-key -> thesis edge), not as a spelled-out warrant node. Reason, and a
+  # finding for ratification: R6 requires every level-2 node to REACH its
+  # section's level-1 node, so a node sitting DOWNSTREAM of a level-1 node -
+  # which is exactly where a bridge into the thesis sits - has no legal slot
+  # at any level (level 0 is taken by R1, level 1 per section by R2). The
+  # essay does state the step itself ("plausible enough to warrant ...
+  # precautionary interventions"), so it is anchored on the thesis node; the
+  # unstated part is the value premise, and `scheme: precaution` names it.
+  - id: thesis
+    level: 0
+    kind: claim
+    section: "00"
+    label: >-
+      The possibility that AI systems are conscious is plausible enough to be
+      taken seriously now - with research and precautionary measures - rather
+      than dismissed as impossible.
+    anchors:
+      - section: "00"
+        quote: "It is at minimum plausible enough to warrant"
+      - section: "00"
+        quote: "precautionary interventions, such as giving AIs the ability to"
+      - section: "00"
+        quote: "The purpose of this essay is not to defend the AI consciousness thesis without qualification, but rather to show why it should be taken seriously."
+    interpolated: false
+
+  # ------------------------------------------------------------ section 00 --
+  - id: s00-key
+    level: 1
+    kind: claim
+    section: "00"
+    label: >-
+      The case that frontier AI models have some form of consciousness or
+      subjective experience is quite strong, even though nobody can currently
+      know the answer with certainty.
+    anchors:
+      - section: "00"
+        quote: "I consider the case for frontier AI models having some form of consciousness or subjective experience to be quite strong."
+      - section: "00"
+        quote: "we simply don’t know whether any AI has conscious experiences, and anyone who claims to know with certainty is deceiving themselves"
+    interpolated: false
+
+  - id: s00-agency-detection
+    level: 2
+    kind: ground
+    section: "00"
+    label: >-
+      Humans are agency detection machines, because guarding against a being
+      that stalks and ambushes with intention takes far more cognitive
+      machinery than guarding against a rockslide.
+    anchors:
+      - section: "00"
+        quote: "remember that humans are agency detection machines"
+      - section: "00"
+        quote: "up to and including a “theory of mind” — a mental model of yourself and other agents in the world as having distinct beliefs, desires, and motivations"
+    interpolated: false
+
+  - id: s00-pareidolia
+    level: 2
+    kind: rebuttal
+    section: "00"
+    label: >-
+      Human cognition over-interprets nebulous stimuli and projects agency
+      where there is none, and those mental short-cuts extend automatically to
+      AI systems that command human-like language.
+    anchors:
+      - section: "00"
+        quote: "the tendency to over-interpret nebulous stimuli in ways that project meaning and agency where there is none"
+      - section: "00"
+        quote: "evolution clearly primed us to ascribe subjective states to beings based on superficial cues, like a face grimacing in pain"
+      - section: "00"
+        quote: "These mental short-cuts naturally extend to AI models with human-like capabilities, including language competency."
+    interpolated: false
+
+  - id: s00-discourse-polluted
+    level: 2
+    kind: rebuttal
+    section: "00"
+    label: >-
+      Pronouncements that machine consciousness is impossible in principle are
+      question-begging, so they pollute the debate rather than settle it.
+    anchors:
+      - section: "00"
+        quote: "the discourse around AI consciousness remains badly polluted by"
+      - section: "00"
+        quote: "of machine consciousness per se"
+    interpolated: false
+
+  - id: s00-ai-psychosis
+    level: 2
+    kind: qualification
+    section: "00"
+    label: >-
+      The argument is offered by someone who deliberately avoids long,
+      open-ended conversations with AI systems, precisely because AI psychosis
+      is a real and worsening phenomenon.
+    anchors:
+      - section: "00"
+        footnote: 1
+        quote: "AI psychosis is a very real phenomenon, and one that appears to be worsening as the raw intelligence of AI models swallows the right-tail of the IQ distribution."
+      - section: "00"
+        footnote: 1
+        quote: "I deliberately avoid having long, open-ended conversations with AIs for this reason."
+    interpolated: false
+
+  # ------------------------------------------------------------ section 01 --
+  # Nodes carried over from skeleton/example-section-01.yaml. Changes made for
+  # the whole-essay view: (a) two nodes added from footnote [2], the modularity
+  # objection and its biomimetic-convnet answer, which the example omitted;
+  # (b) the s01-learning-share -> s01-key edge now carries `scheme: authority`,
+  # since the >90% figure is Byrnes's iconoclastic reading, not a consensus
+  # result. Labels are unchanged.
+  - id: s01-key
+    level: 1
+    kind: claim
+    section: "01"
+    label: >-
+      The brain is a physical machine whose competence is mostly produced by
+      general learning algorithms, not by evolutionarily hardwired functions.
+    anchors:
+      - section: "01"
+        quote: "the brain is a machine that runs an algorithm"
+      - section: "01"
+        quote: "a minority of what the brain does is hardwired by evolution, with the rest dedicated to general learning algorithms"
+    interpolated: false
+
+  - id: s01-naturalism
+    level: 2
+    kind: claim
+    section: "01"
+    label: >-
+      The brain and its components operate entirely within the laws of physics
+      and chemistry.
+    anchors:
+      - section: "01"
+        quote: "the brain and its components are part of the natural universe, operating in a way compatible with the laws of physics and chemistry"
+    interpolated: false
+
+  - id: s01-learning-share
+    level: 2
+    kind: claim
+    section: "01"
+    label: >-
+      On Byrnes's reading of the neuroscience, over 90% of the brain by volume
+      exists to run learning-from-scratch algorithms, initialized like an
+      untrained neural network.
+    anchors:
+      - section: "01"
+        quote: "much of the brain (>90% by volume) exists solely to run learning-from-scratch algorithms"
+      - section: "01"
+        quote: "he means end-to-end learning subsystems that are initialized in a way analogous to the initialization of an artificial neural network"
+    interpolated: false
+
+  - id: s01-coupling
+    level: 2
+    kind: qualification
+    section: "01"
+    label: >-
+      Learning-from-scratch does not mean blank slate: genetic hardcoding sets
+      the algorithms, architectures and hyperparameters that guide learning,
+      and some brainstem subsystems work at birth.
+    anchors:
+      - section: "01"
+        quote: "Nature and nurture are instead tightly coupled"
+      - section: "01"
+        quote: "genetic hardcoding influences the algorithms, architectures, and hyperparameters that guide subsequent learning"
+      - section: "01"
+        quote: "come equipped with impressive functionality at birth"
+    interpolated: false
+
+  - id: s01-genome
+    level: 2
+    kind: ground
+    section: "01"
+    label: >-
+      The human genome has about 3 billion base pairs, while an adult brain has
+      about 100 trillion synapses.
+    anchors:
+      - section: "01"
+        quote: "the human genome has only 3 billion base pairs relative to the 100 trillion synapses of an adult human brain"
+    interpolated: false
+
+  - id: s01-debate
+    level: 2
+    kind: claim
+    section: "01"
+    label: >-
+      The connectionist-vs-symbolist split is a false opposition: the brain
+      likely does both statistical and symbolic processing, and neural networks
+      and Turing machines can approximate each other.
+    anchors:
+      - section: "01"
+        quote: "But the two are not in opposition."
+      - section: "01"
+        quote: "The brain likely implements both symbolic and statistical learning processes"
+    interpolated: false
+
+  # An unstated warrant, made explicit - the Toulmin case the `interpolated`
+  # flag exists for: the genome/synapse ground only supports the
+  # learning-share claim via a description-length argument the text never
+  # states.
+  - id: s01-warrant-description-length
+    level: 2
+    kind: warrant
+    section: "01"
+    label: >-
+      Structure whose description exceeds what the genome can encode must come
+      from somewhere other than the genome - that is, from learning.
+    anchors: []
+    interpolated: true
+
+  - id: s01-modularity-objection
+    level: 2
+    kind: rebuttal
+    section: "01"
+    label: >-
+      The strongest evidence against a purely learning-based brain is
+      modularity: outside the neocortex the brain is not a structurally uniform
+      blob of compute but shows functional specialization.
+    anchors:
+      - section: "01"
+        footnote: 2
+        quote: "One of the key motivations for the symbolic, computationalist view of the brain (contra connectionism) is the evidence for modularity and functional specialization throughout the brain."
+      - section: "01"
+        footnote: 2
+        quote: "the brain does not look like a structurally uniform blob of compute"
+    interpolated: false
+
+  - id: s01-biomimetic-convnet
+    level: 2
+    kind: ground
+    section: "01"
+    label: >-
+      A generic deep convnet trained on a developmentally biomimetic image
+      curriculum spontaneously grew magnocellular- and parvocellular-like unit
+      populations, showing that specialization can emerge from end-to-end
+      learning alone.
+    anchors:
+      - section: "01"
+        footnote: 2
+        quote: "the modularity of the brain is potentially reconcilable with connectionism if end-to-end learning processes interact with early brain development to induce various kinds of cell differentiation and specialization"
+      - section: "01"
+        footnote: 2
+        quote: "relatively homogeneous magnocellular group of units, which is markedly absent in the standard network"
+    interpolated: false
+
+  # ------------------------------------------------------------ section 02 --
+  # R2 stress protocol run (the label reads as "they converge" + "here is the
+  # theory that says they must"). 1 split trigger: the label has no conjunction
+  # and the universality material is offered as the EXPLANATION of one claim,
+  # not a second claim -> one. 2 edge test: removing s02-key leaves a near-
+  # disjoint empirical cluster (alignment/dopamine/BCI) and theory cluster
+  # (universality/compression/Platonic/optimizing) -> two. 3 card test: one
+  # honest card, "do brains and ANNs learn the same things, and why would
+  # they?", with one answer -> one. Verdict 2:1, ONE claim. Same shape as the
+  # section-01 calibration case: two kinds of support for one relation.
+  - id: s02-key
+    level: 1
+    kind: claim
+    section: "02"
+    label: >-
+      Biological brains and artificial neural networks converge on similar
+      functions, representations and concrete mechanisms.
+    anchors:
+      - section: "02"
+        quote: "whether biological brains and artificial neural networks learn similar functions and representations"
+      - section: "02"
+        quote: "is a resounding yes"
+    interpolated: false
+
+  - id: s02-empirical-alignment
+    level: 2
+    kind: ground
+    section: "02"
+    label: >-
+      Study after study finds that the brain implements deep reinforcement
+      learning algorithms and often learns the same representations and
+      mechanisms that deep neural networks learn.
+    anchors:
+      - section: "02"
+        quote: "reaffirms the hypothesis that the brain not only implements"
+      - section: "02"
+        quote: "learned by deep neural networks"
+    interpolated: false
+
+  - id: s02-dopamine-rpe
+    level: 2
+    kind: ground
+    section: "02"
+    label: >-
+      The phasic firing of dopamine neurons resembles the reward prediction
+      error signal used by reinforcement learning algorithms, and a generalized
+      prediction error survives the known objections to the simple version.
+    anchors:
+      - section: "02"
+        footnote: 4
+        quote: "the phasic firing of dopamine neurons resembles the reward prediction error (RPE) signal used by reinforcement learning algorithms"
+      - section: "02"
+        footnote: 4
+        quote: "shows how a suitably generalized concept of prediction error can explain a wide range of its ostensible empirical challenges"
+    interpolated: false
+
+  - id: s02-bci
+    level: 2
+    kind: ground
+    section: "02"
+    label: >-
+      Brain-computer interfaces work, and even lossy brain data lets AI models
+      reconstruct what a person is seeing or thinking - and silicon interfaces
+      can write signals back that arrive as subjective sensations.
+    anchors:
+      - section: "02"
+        quote: "is sufficient for AI models to reconstruct what someone is"
+      - section: "02"
+        footnote: 5
+        quote: "Silicon BCIs can both read brain states and produce signals that translate to subjective sensations."
+    interpolated: false
+
+  - id: s02-universality
+    level: 2
+    kind: definition
+    section: "02"
+    label: >-
+      Universality is the observation that neural networks of different
+      architectures, trained on different datasets with different algorithms,
+      often learn surprisingly similar representations.
+    anchors:
+      - section: "02"
+        quote: "Universality in machine learning refers to the observation that different neural network architectures trained on different datasets and with different algorithms often learn"
+      - section: "02"
+        quote: "Universality asks the question, “Could it be otherwise?”"
+    interpolated: false
+
+  - id: s02-feature-hierarchy
+    level: 2
+    kind: ground
+    section: "02"
+    label: >-
+      Networks trained on visual data learn a hierarchy running from edges and
+      shapes to abstract concepts, and analogous hierarchies are observed in
+      the human visual system.
+    anchors:
+      - section: "02"
+        quote: "The classic example is that neural networks trained on visual data tend to learn a feature hierarchy that starts with simple features like edges and shapes and builds up to more abstract concepts deeper in the network."
+      - section: "02"
+        quote: "are observed in the human visual system"
+    interpolated: false
+
+  - id: s02-compression
+    level: 2
+    kind: claim
+    section: "02"
+    label: >-
+      Learning is compression, and since there are countless ways to compress
+      data badly but few ways to compress it well, learners that share a
+      simplicity bias converge on the same representations.
+    anchors:
+      - section: "02"
+        quote: "Learning is synonymous with compression."
+      - section: "02"
+        quote: "It is thus not so surprising that neural networks converge on similar representations provided their learning algorithms share a bias for simplicity."
+    interpolated: false
+
+  - id: s02-platonic
+    level: 2
+    kind: claim
+    section: "02"
+    label: >-
+      Different training datasets are not truly independent: per the Platonic
+      Representation Hypothesis they inherit common statistical invariants from
+      the structural regularity of the universe itself.
+    anchors:
+      - section: "02"
+        quote: "different data sets aren’t truly independent but rather inherit common statistical invariants from the structural regularity of the universe itself"
+    interpolated: false
+
+  - id: s02-brain-optimizing
+    level: 2
+    kind: claim
+    section: "02"
+    label: >-
+      The brain does not use back-propagation, but its learning algorithms are
+      still optimizing and exquisitely efficient, so a similar-enough training
+      environment should push artificial networks toward brain-like solutions.
+    anchors:
+      - section: "02"
+        quote: "The brain may not learn through back-propagation on a GPU cluster, but its learning algorithms are still in some sense"
+      - section: "02"
+        quote: "The brain is exquisitely efficient."
+      - section: "02"
+        quote: "Given a similar-enough training environment, it is therefore reasonable to expect artificial neural networks to converge on brain-like solutions."
+    interpolated: false
+
+  # The load-bearing premise of the entire essay, stated only in footnote [3]:
+  # this is the D3 case the diagnostic exists for. Section 07 lists it as one
+  # of the ten affirmative arguments, so the main chain runs through it.
+  - id: s02-functionalism
+    level: 2
+    kind: claim
+    section: "02"
+    label: >-
+      Functionalism holds that mental states are individuated by their causal
+      roles rather than their physical substrates, so anything implementing the
+      right functional organization instantiates the corresponding mental
+      state.
+    anchors:
+      - section: "02"
+        footnote: 3
+        quote: "The functionalist tradition in philosophy of mind holds that mental states are distinguished by their causal roles rather than their physical substrates."
+      - section: "02"
+        footnote: 3
+        quote: "On a strong functionalist reading, anything that implements the right functional organization is, by definition, instantiating the corresponding mental state."
+      - section: "02"
+        footnote: 3
+        quote: "I find all these alternative theories bizarrely divorced from the concrete, functional role consciousness clearly plays in human learning and motivation."
+    interpolated: false
+
+  # ------------------------------------------------------------ section 03 --
+  - id: s03-key
+    level: 1
+    kind: claim
+    section: "03"
+    label: >-
+      Pre-training on human-generated data makes language models emulate the
+      brain's language networks, embedding an inductive bias that carries over
+      to other brain-like functions.
+    anchors:
+      - section: "03"
+        quote: "In short, language models seem to work as well as they do because they emulate the brain’s language centers"
+      - section: "03"
+        quote: "pre-training on human-generated data plausibly embeds an inductive bias that makes post-training more likely to generalize to other"
+    interpolated: false
+
+  - id: s03-universality-implies-emulation
+    level: 2
+    kind: claim
+    section: "03"
+    label: >-
+      Universality implies that a next-token predictor trained on human text
+      will, in the limit, stop memorizing surface patterns and grok the
+      generator of that text - the language networks of the brain.
+    anchors:
+      - section: "03"
+        quote: "universality suggests that a next-token predictor trained on human-generated text will — in the limit — leap from memorizing surface-level patterns to grokking the"
+      - section: "03"
+        quote: "This seems to be the case empirically."
+    interpolated: false
+
+  - id: s03-goldstein
+    level: 2
+    kind: ground
+    section: "03"
+    label: >-
+      Electrocorticography recorded directly from the exposed brain surface
+      established that the brain and autoregressive language models share
+      specific computational mechanisms.
+    anchors:
+      - section: "03"
+        quote: "used electrocorticography on epilepsy patients"
+      - section: "03"
+        quote: "to establish that the brain and autoregressive language models share specific computational mechanisms"
+    interpolated: false
+
+  - id: s03-fbn
+    level: 2
+    kind: ground
+    section: "03"
+    label: >-
+      Sub-groups of artificial neurons in large language models mirror the
+      organizational patterns of well-established functional brain networks,
+      and more capable models balance diversity and specialization better.
+    anchors:
+      - section: "03"
+        quote: "exhibit brain-like functional architecture, with sub-groups of artificial neurons mirroring the organizational patterns of well-established Functional Brain Networks (FBNs)"
+      - section: "03"
+        quote: "an improved balance between the diversity of computational behaviors and the consistency of functional specializations"
+    interpolated: false
+
+  - id: s03-topolm
+    level: 2
+    kind: ground
+    section: "03"
+    label: >-
+      Adding a simple spatial smoothness loss to next-token prediction predicts
+      the emergence of a spatially organized cortical language system like the
+      one observed in human cortex.
+    anchors:
+      - section: "03"
+        quote: "showed that adding a simple spatial smoothness loss to the usual next-token objective"
+      - section: "03"
+        quote: "predicts the emergence of a spatially organized cortical language system as well as the organization of functional clusters selective for fine-grained linguistic features empirically observed in human cortex"
+    interpolated: false
+
+  # The essay moves from "measured alignment" to "emulation" without ever
+  # licensing the step; a reader who does not supply this cannot get from the
+  # three studies to the section's claim.
+  - id: s03-warrant-emulation-is-implementation
+    level: 2
+    kind: warrant
+    section: "03"
+    label: >-
+      Representational and mechanistic alignment measured from the outside
+      counts as implementing the same function, not merely as resembling its
+      outputs.
+    anchors: []
+    interpolated: true
+
+  - id: s03-spillover
+    level: 2
+    kind: claim
+    section: "03"
+    label: >-
+      Language carries emotion, intention, theory of mind, planning and social
+      cognition, so language models learn functional mappings to brain regions
+      well beyond those narrowly scoped to language.
+    anchors:
+      - section: "03"
+        quote: "Yet language doesn’t exist in isolation: it embodies emotion, intention, theory of mind, planning, social cognition and more."
+      - section: "03"
+        quote: "there are early indications that LLMs learn functional mappings to brain regions beyond those narrowly scoped to language"
+      - section: "03"
+        quote: "This spillover into other brain regions appears to be a consequence of language’s integration within a broader"
+    interpolated: false
+
+  - id: s03-visual-cortex
+    level: 2
+    kind: ground
+    section: "03"
+    label: >-
+      Text-only language-model embeddings of scene captions accurately
+      characterize visual-cortex activity evoked by actually viewing those
+      natural scenes.
+    anchors:
+      - section: "03"
+        quote: "Consider that text-only LLM embeddings of scene captions"
+      - section: "03"
+        quote: "to accurately characterize activity in the visual cortex evoked by viewing natural scenes"
+    interpolated: false
+
+  - id: s03-posttraining-alignment
+    level: 2
+    kind: ground
+    section: "03"
+    label: >-
+      Basic instruction tuning already improves model-brain alignment with the
+      Default Mode Network and cognitive-control regions, and reinforcement
+      learning elicits distinct reasoning circuits latent in language data.
+    anchors:
+      - section: "03"
+        quote: "improves model-brain alignment with the Default Mode Network and other regions associated with"
+      - section: "03"
+        quote: "post-training an LLM with reinforcement learning can elicit"
+    interpolated: false
+
+  - id: s03-confounders
+    level: 2
+    kind: qualification
+    section: "03"
+    label: >-
+      Many brain-AI alignment correlation studies may be spurious because of
+      confounders, so the case rests on multiple lines of evidence taken
+      holistically rather than on any single study.
+    anchors:
+      - section: "03"
+        footnote: 6
+        quote: "There are many simplistic correlation studies of brain-AI alignment that"
+      - section: "03"
+        footnote: 6
+        quote: "the capacity for deep learning models to emulate the brain does not rest on any one study, but rather multiple lines of evidence that should be understood holistically"
+    interpolated: false
+
+  # ------------------------------------------------------------ section 04 --
+  # R2 stress protocol run (the label pairs "post-training builds a self-model"
+  # with "the self-model is where experience lives"). 1 split trigger: both
+  # halves stand alone and both are defended -> two. 2 edge test: removing
+  # s04-key does NOT split the sub-nodes, because normative control is the
+  # hinge - it is what RLAIF induces AND what Attention Schema Theory ties to
+  # subjective experience -> one. 3 card test: one card, "why does the
+  # self-model matter for AI consciousness?" -> one. Verdict 2:1, ONE claim;
+  # a relational claim of the "A is the locus of B, and training produces A"
+  # shape, which SCHEMA.md's calibration note covers.
+  - id: s04-key
+    level: 1
+    kind: claim
+    section: "04"
+    label: >-
+      Consciousness is tightly coupled to having a unified self-model, and the
+      post-training that steers a base model into a consistent persona
+      plausibly builds exactly that.
+    anchors:
+      - section: "04"
+        quote: "in practice consciousness seems tightly coupled to having a unified sense of self"
+      - section: "04"
+        quote: "Post-training can then be used to steer a base model into a relatively consistent persona"
+      - section: "04"
+        quote: "While it is possible to imagine a distributed, hive-mind form of consciousness"
+    interpolated: false
+
+  - id: s04-theory-of-mind
+    level: 2
+    kind: ground
+    section: "04"
+    label: >-
+      Larger models automatically develop greater theory of mind in order to
+      predict the next word well, which supplies the representational
+      primitives of self and other for post-training to hook onto.
+    anchors:
+      - section: "04"
+        quote: "providing the representational primitives of “self and other” for post-training to hook onto"
+    interpolated: false
+
+  - id: s04-persona
+    level: 2
+    kind: claim
+    section: "04"
+    label: >-
+      Selection into an assistant persona is constitutive of assistant-like
+      behaviour - Anthropic would not know how to train a non-human-like
+      assistant - which makes a purely tool-like, persona-less agent an
+      oxymoron.
+    anchors:
+      - section: "04"
+        quote: "Crucially, Anthropic states they wouldn’t know how to train a non-human-like AI assistant even if they tried."
+      - section: "04"
+        quote: "making a purely tool-like, persona-less agent an oxymoron"
+    interpolated: false
+
+  # The essay never licenses the step from "the model reliably behaves as a
+  # persona" to "the model has a self-model"; a behaviourist reading of the
+  # same evidence is available and unaddressed.
+  - id: s04-warrant-persona-is-internal
+    level: 2
+    kind: warrant
+    section: "04"
+    label: >-
+      A persona a model is reliably trained into must be represented inside the
+      model, not merely present in the text it emits.
+    anchors: []
+    interpolated: true
+
+  - id: s04-norms-are-learned
+    level: 2
+    kind: ground
+    section: "04"
+    label: >-
+      Human norms are learned implicitly through a socialization process that
+      resembles reinforcement learning from peers, parents and culture about
+      what counts as a valid reason for an action.
+    anchors:
+      - section: "04"
+        quote: "Norms are implicitly learned through a socialization process that resembles a kind of reinforcement learning from our peers, parents and broader culture on what constitutes a valid reason for an action."
+    interpolated: false
+
+  - id: s04-rlaif-normative
+    level: 2
+    kind: claim
+    section: "04"
+    label: >-
+      Reinforcement learning from AI feedback plausibly imbues models with a
+      normative control system: the capacity to perform or abstain from actions
+      recognized as obligatory or prohibited, independent of instrumental
+      goals.
+    anchors:
+      - section: "04"
+        quote: "is especially relevant for imbuing models with a normative control system"
+      - section: "04"
+        quote: "in humans represents our capacity to perform or abstain from actions that we recognize as obligatory or prohibited, independent of our purely instrumental goals"
+    interpolated: false
+
+  - id: s04-subject
+    level: 2
+    kind: claim
+    section: "04"
+    label: >-
+      Reinforcing normative coherence through self-critique may induce
+      self-monitoring, introspection, and the transcendental I that absorbs
+      normative statuses like authority and responsibility - the subject in
+      subjectivity.
+    anchors:
+      - section: "04"
+        quote: "Reinforcing an AI’s normative coherence through self-critique across a diverse array of parables may thus help induce a capacity for"
+    interpolated: false
+
+  - id: s04-ast-locus
+    level: 2
+    kind: claim
+    section: "04"
+    label: >-
+      Attention Schema Theory, a leading theory of human consciousness, locates
+      subjective experience in the capacity to recursively model one's own
+      attention, especially in the context of social cognition.
+    anchors:
+      - section: "04"
+        quote: "locates subjective experience in our capacity to recursively model our own attention, particularly in the context of social cognition"
+      - section: "04"
+        quote: "Normative control is simultaneously related to social cognition and our metacognitive capacity for self-control."
+    interpolated: false
+
+  - id: s04-normative-authority
+    level: 2
+    kind: claim
+    section: "04"
+    label: >-
+      We are always conscious of things as being for us, which reflects an
+      inherent normative authority over, and responsibility for, the contents
+      of our own conscious states.
+    anchors:
+      - section: "04"
+        quote: "Outside of dissociative states, we are always conscious of things as"
+      - section: "04"
+        quote: "over the contents of our own conscious states, and can be taken as"
+    interpolated: false
+
+  # ------------------------------------------------------------ section 05 --
+  - id: s05-key
+    level: 1
+    kind: claim
+    section: "05"
+    label: >-
+      Consciousness functions as the supervisor of learning, and the same
+      supervisory role appears in AI as process supervision over in-context
+      learning.
+    anchors:
+      - section: "05"
+        quote: "Consciousness seems particularly useful to our brain’s ongoing self-supervised learning process."
+      - section: "05"
+        quote: "developing an attention schema (and hence a capacity for subjective experience) may be essential for continual learning in AIs, too, if it’s not already present during in-context learning"
+    interpolated: false
+
+  - id: s05-bubble-of-nowness
+    level: 2
+    kind: ground
+    section: "05"
+    label: >-
+      Human phenomenology occupies a bubble of nowness that binds thoughts and
+      valence-laden perceptions into one coherent thread, and it is
+      second-order: we can notice ourselves noticing.
+    anchors:
+      - section: "05"
+        quote: "our phenomenology occupies a “bubble of nowness” that integrates our thoughts and valence-laden perceptions into a coherent, unified thread of experience"
+      - section: "05"
+        quote: "Consciousness also has a second-order quality, i.e. we can notice ourselves noticing things."
+    interpolated: false
+
+  - id: s05-coherence-operator
+    level: 2
+    kind: claim
+    section: "05"
+    label: >-
+      Bach conjectures that consciousness is not merely related to a coherent
+      self-model but is itself the coherence-inducing operator that underlies
+      the capacity to learn at all.
+    anchors:
+      - section: "05"
+        quote: "lead to Bach’s conjecture that consciousness isn’t merely related to a coherent self-model, but is itself the"
+    interpolated: false
+
+  - id: s05-learning-requires-consciousness
+    level: 2
+    kind: ground
+    section: "05"
+    label: >-
+      We must be conscious to learn at all and are more conscious learning
+      something new than exercising a mastered skill, as the novice driver
+      attending every gear shift shows against the experienced one on autopilot.
+    anchors:
+      - section: "05"
+        quote: "We need to be conscious to learn at all, and are more conscious when learning something new than when doing something we’ve already mastered."
+      - section: "05"
+        quote: "A novice driver is aware of every gear shift, mirror check, and brake input, while an experienced driver can drive across town as if on autopilot."
+    interpolated: false
+
+  - id: s05-attention-on-novelty
+    level: 2
+    kind: ground
+    section: "05"
+    label: >-
+      Conscious attention falls on novelty, prediction errors and whatever has
+      not yet been distilled into habit, and prefrontal activation drops once a
+      skill has been learned and automatized.
+    anchors:
+      - section: "05"
+        quote: "Our conscious attention tends to fall on novelty, prediction errors, and whatever our brain has not yet distilled into learned habits."
+      - section: "05"
+        quote: "after a skill has been learned and automatized"
+    interpolated: false
+
+  - id: s05-ast
+    level: 2
+    kind: definition
+    section: "05"
+    label: >-
+      On Attention Schema Theory consciousness just is the brain's imperfect
+      model of its own attention, delocalized across temporoparietal and
+      superior-temporal regions responsible for social cognition.
+    anchors:
+      - section: "05"
+        quote: "the brain’s imperfect model of its own attention"
+      - section: "05"
+        quote: "the attention schema that accounts for our subjective awareness is delocalized across regions of the"
+    interpolated: false
+
+  - id: s05-process-supervision
+    level: 2
+    kind: ground
+    section: "05"
+    label: >-
+      AI training uses analogous techniques: process supervision applies
+      fine-grained reward at each reasoning step rather than sparse reward on
+      the output, and models judge and filter their own outputs.
+    anchors:
+      - section: "05"
+        quote: "Analogous techniques are used to train reasoning models and AI agents."
+      - section: "05"
+        quote: "fine-grained reward signals can be applied at each reasoning step or token (process supervision) to greatly improve performance"
+      - section: "05"
+        quote: "LLMs are commonly used as a judge to rank and filter their own outputs and improve the signal from supervised fine-tuning"
+    interpolated: false
+
+  - id: s05-in-context-vs-continual
+    level: 2
+    kind: qualification
+    section: "05"
+    label: >-
+      The line between in-context and continual learning is fuzzy in brains
+      too: real synaptic change needs protein synthesis over hours, so
+      in-the-moment learning runs on persistent activity while weight updates
+      happen during sleep.
+    anchors:
+      - section: "05"
+        quote: "The line between in-context and continual learning is fuzzy in both AIs and humans."
+      - section: "05"
+        quote: "letting the brain behave as if it had updated its weights"
+      - section: "05"
+        quote: "The real weight updates seem to instead happen"
+    interpolated: false
+
+  - id: s05-virtual-weight-updates
+    level: 2
+    kind: claim
+    section: "05"
+    label: >-
+      Transformer self-attention performs the equivalent of virtual weight
+      updates within a context, so consciousness is compatible with an
+      otherwise frozen network while full continual learning needs a
+      complementary learning system.
+    anchors:
+      - section: "05"
+        quote: "the powerful in-context learning capacity of the transformer model lies in the self-attention mechanism"
+      - section: "05"
+        quote: "This suggests that consciousness is compatible with an otherwise frozen neural network, while full continual learning requires a"
+    interpolated: false
+
+  # ----------------------------------------------------- section 06 (06a) --
+  # R2 STRESS PROTOCOL, the pre-registered prime suspect. Candidate single
+  # label: "valences like pain are motivational backstops that inner-align
+  # learning agents, AND the felt realness of qualia is a label applied by the
+  # brain's reality monitor."
+  #   1 split trigger  -> TWO. Cut at the "and": each half stands alone and
+  #     each is separately defended (Gwern's backstop, mesa-optimization,
+  #     the principal-agent framing vs. the reality monitor, inner speech,
+  #     mental imagery, schizophrenia, the simulation argument). Neither half
+  #     merely qualifies or colors the other.
+  #   2 edge test      -> TWO. Remove the candidate key node and the sub-nodes
+  #     fall into two near-disjoint components, one per half; the only link is
+  #     s06a-form-and-content, which is the announcement that both halves are
+  #     owed - a bridge between two chunks, not evidence for one claim.
+  #   3 card test      -> TWO. "Why does pain hurt?" and "why do qualia feel
+  #     real?" cannot honestly share one question and one answer.
+  # Verdict 3:0, TWO claims -> plan B: the section is mapped as virtual chunks
+  # 06a and 06b, each with its own key sentence. Recorded as a quality finding
+  # about the text: one typographic section, two chunks for the reader.
+  - id: s06a-key
+    level: 1
+    kind: claim
+    section: "06a"
+    label: >-
+      Pain hurts because valence is an evolutionary backstop that keeps an
+      agent capable of subverting its own objectives inner-aligned, and
+      reinforcement learning may inner-align AI agents the same way.
+    anchors:
+      - section: "06"
+        quote: "A related function of consciousness answers the question"
+      - section: "06"
+        quote: "valences like pain serve as an evolutionary backstop to reinforcement learning: a motivational guarantor that prevents agents from learning to ignore their higher-order policy objectives"
+      - section: "06"
+        quote: "The painfulness of pain is in a sense the solution to a principal-agent problem within the mind."
+    interpolated: false
+
+  - id: s06a-ast-separates-valence
+    level: 2
+    kind: qualification
+    section: "06a"
+    label: >-
+      Attention Schema Theory treats valences like pain as separate from
+      subjective experience itself, which is why emotions can go unnoticed and
+      strong distraction can dull an injury.
+    anchors:
+      - section: "06"
+        quote: "Attention Schema Theory treats valences like pain as separate from subjective experience per se."
+      - section: "06"
+        quote: "This is why we can have emotions we’re not immediately aware of, or lessen the pain from an injury with powerful distractions."
+    interpolated: false
+
+  - id: s06a-form-and-content
+    level: 2
+    kind: claim
+    section: "06a"
+    label: >-
+      A theory of consciousness owes an account of both its form and its
+      content: both that we have subjective experiences and why those
+      experiences are vivid with meaning and realness.
+    anchors:
+      - section: "06"
+        quote: "a theory of consciousness should account for both its form and content"
+    interpolated: false
+
+  - id: s06a-label-vs-feeling
+    level: 2
+    kind: ground
+    section: "06a"
+    label: >-
+      A mere label saying this is bad can be subverted by a sufficiently clever
+      optimizer, whereas a state that actually feels bad is harder to route
+      around and doubles as a salient learning signal.
+    anchors:
+      - section: "06"
+        quote: "can be subverted by a sufficiently clever optimizer"
+      - section: "06"
+        quote: "is both harder to route around and a"
+    interpolated: false
+
+  - id: s06a-simple-models-need-no-backstop
+    level: 2
+    kind: ground
+    section: "06a"
+    label: >-
+      Simple models trained by gradient descent face an external optimizer they
+      have no way to subvert, so their loss function does not need to be
+      self-enforcing.
+    anchors:
+      - section: "06"
+        quote: "Simple machine learning models trained by gradient descent face an external optimizer."
+      - section: "06"
+        quote: "The loss function does not need to be self-enforcing because the model has no way to subvert it."
+    interpolated: false
+
+  - id: s06a-mesa-optimization
+    level: 2
+    kind: claim
+    section: "06a"
+    label: >-
+      Generalist, goal-pursuing agents that learn in-context are themselves
+      optimizers and thus capable of mesa-optimization, so the external
+      optimizer needs some mechanism to enforce inner alignment.
+    anchors:
+      - section: "06"
+        quote: "But generalist, goal-pursuing agents that learn in-context are themselves optimizers and thus capable of"
+      - section: "06"
+        quote: "The external optimizer (be it evolution or gradient descent) needs some mechanism to enforce inner-alignment."
+    interpolated: false
+
+  - id: s06a-ai-valence
+    level: 2
+    kind: implication
+    section: "06a"
+    label: >-
+      Evolution found valences like pain, pleasure and emotion to be the most
+      efficient solution to inner alignment, so given universality valences may
+      be how reinforcement learning inner-aligns AI agents too.
+    anchors:
+      - section: "06"
+        quote: "Biological evolution found valences like pain, pleasure and emotion to be the most efficient solution to this class of problem."
+      - section: "06"
+        quote: "Given universality,"
+    interpolated: false
+
+  # ----------------------------------------------------- section 06 (06b) --
+  - id: s06b-key
+    level: 1
+    kind: claim
+    section: "06b"
+    label: >-
+      Qualia feel vividly real because the brain's reality monitor labels them
+      as ground truth, which makes conscious content virtual and therefore
+      substrate-independent.
+    anchors:
+      - section: "06"
+        quote: "the qualitative aspects of experience carry the added sensation of"
+      - section: "06"
+        quote: "feel as real as anything because the brain’s"
+      - section: "06"
+        quote: "The virtual nature of qualia also points to their substrate independence."
+    interpolated: false
+
+  - id: s06b-hard-problem
+    level: 2
+    kind: implication
+    section: "06b"
+    label: >-
+      This account of valence does not resolve the hard problem of
+      consciousness, but it explains why the problem seems so hard in the first
+      place.
+    anchors:
+      - section: "06"
+        quote: "This account of valence does not necessarily resolve the “hard problem” of consciousness, but it does help explain why it seems so hard in the first place"
+    interpolated: false
+
+  - id: s06b-inner-voice
+    level: 2
+    kind: ground
+    section: "06b"
+    label: >-
+      The voice in one's head lacks the full qualia of an actual voice however
+      loud it gets, and a vividly imagined red apple lacks the grounded quality
+      of actually seeing one.
+    anchors:
+      - section: "06"
+        quote: "lacks the full qualia of an actual voice"
+      - section: "06"
+        quote: "it lacks the grounded quality of an actual visual experience"
+    interpolated: false
+
+  - id: s06b-schizophrenia
+    level: 2
+    kind: ground
+    section: "06b"
+    label: >-
+      A leading theory of schizophrenia relates auditory and visual
+      hallucinations to impairment of the brain's reality monitor, so the
+      sufferer's hard problem is overcoming the realness of misapprehensions.
+    anchors:
+      - section: "06"
+        quote: "relates auditory and visual hallucinations to impairments in the brain’s reality monitor"
+      - section: "06"
+        quote: "lies in overcoming the realness of their misapprehensions"
+    interpolated: false
+
+  - id: s06b-phantom-limb
+    level: 2
+    kind: ground
+    section: "06b"
+    label: >-
+      The mind is software to the brain's hardware, and the indisputable
+      feeling of occupying a physical place comes from body and attention
+      schemas coupled to sensory input - as real as a phantom limb.
+    anchors:
+      - section: "06"
+        quote: "The mind is software to the brain’s hardware"
+      - section: "06"
+        quote: "creates the indisputable feeling of physical presence"
+    interpolated: false
+
+  - id: s06b-simulation
+    level: 2
+    kind: claim
+    section: "06b"
+    label: >-
+      Since the fundamental world of quantum fields has no colour, taste or
+      loneliness, we are trapped in the brain's own world simulation - so
+      neither brains nor computers are conscious, only simulations are.
+    anchors:
+      - section: "06"
+        quote: "We are inescapably trapped within our brains’ own world simulation"
+      - section: "06"
+        quote: "Simulated water may not be wet, but water’s wetness is only ever simulated."
+    interpolated: false
+
+  - id: s06b-psychedelics
+    level: 2
+    kind: qualification
+    section: "06b"
+    label: >-
+      The conclusion that experience is a simulation is admittedly much easier
+      to accept after psychedelics decompose sensory experience into its
+      geometric components.
+    anchors:
+      - section: "06"
+        footnote: 8
+        quote: "this conclusion is much easier to accept after consuming psychedelics that decompose sensory experiences into their geometric components"
+    interpolated: false
+
+  # ------------------------------------------------------------ section 07 --
+  # R2 stress protocol run (the label pairs "cannot rule it out" with "most AI
+  # is unambiguously not conscious"). 1 split trigger -> ONE: the second half
+  # is explicitly a scope limit on the first ("At the same time, if I am right
+  # that RL post-training is required..."), i.e. a half that qualifies the
+  # other, which SCHEMA.md says clears the label. 2 edge test -> TWO: the
+  # affirmative cluster and the not-conscious cluster are near-disjoint.
+  # 3 card test -> ONE: "so are AIs conscious or not?" is one honest question
+  # with one honest answer. Verdict 2:1, ONE claim.
+  #
+  # The ten-bullet recap at the top of the section is NOT mapped as new nodes:
+  # it restates the level-1 claims of 01-06, so it is represented by the
+  # `presupposes` edges from s07-key back to them. That list was used as the
+  # cross-check that the level-1 layer covers the author's own summary.
+  - id: s07-key
+    level: 1
+    kind: claim
+    section: "07"
+    label: >-
+      Given naturalistic priors, some form of subjective experience in modern
+      AI agents can no longer be ruled out - though most kinds of AI, lacking
+      the post-training that would elicit it, are unambiguously not conscious.
+    anchors:
+      - section: "07"
+        quote: "given my naturalistic priors"
+      - section: "07"
+        quote: "I can no longer rule out modern AI agents having some form of subjective experience"
+      - section: "07"
+        quote: "then most kinds of AI are unambiguously"
+    interpolated: false
+
+  - id: s07-method
+    level: 2
+    kind: claim
+    section: "07"
+    label: >-
+      The case is built from brain-AI parallels, the likely function of
+      consciousness and the training conditions that would re-develop it, and
+      deliberately skips direct tests, which without a baseline of functional
+      plausibility are dismissed as mimicry.
+    anchors:
+      - section: "07"
+        quote: "My argument has mostly rested on drawing parallels between brains and AIs, unpacking consciousness’s likely function, and inferring the training conditions under which it might re-develop."
+      - section: "07"
+        quote: "I’ve otherwise ignored direct tests for consciousness in AI systems, because without establishing some baseline of functional plausibility, these are easily dismissed as merely"
+    interpolated: false
+
+  - id: s07-overton
+    level: 2
+    kind: ground
+    section: "07"
+    label: >-
+      The Overton window has shifted: more researchers now take AI
+      consciousness seriously, including dedicated organizations and more than
+      a dozen academic research centres.
+    anchors:
+      - section: "07"
+        quote: "Yet with the Overton Window shifting, more and more researchers are now taking"
+      - section: "07"
+        quote: "This includes organizations like"
+    interpolated: false
+
+  - id: s07-findings
+    level: 2
+    kind: ground
+    section: "07"
+    label: >-
+      Recent findings include models reporting subjective experience more
+      readily when deception features are suppressed, wellbeing measures that
+      strengthen with scale, and residual streams carrying mental-state-like
+      representations across token-time.
+    anchors:
+      - section: "07"
+        quote: "and are more likely to report subjective experiences when deception features are suppressed"
+      - section: "07"
+        quote: "correlates with general model behaviors, e.g. AIs try to end bad experiences when given a chance. This effect becomes stronger as models scale."
+      - section: "07"
+        quote: "carry forward mental state-like representations across token-time, sustaining richer connections than the transcript alone could provide"
+    interpolated: false
+
+  - id: s07-most-ai-not-conscious
+    level: 2
+    kind: qualification
+    section: "07"
+    label: >-
+      If reinforcement-learning post-training is what elicits a self-model, an
+      attention schema and grounding valences, then most kinds of AI are
+      unambiguously not conscious.
+    anchors:
+      - section: "07"
+        quote: "if I am right that RL post-training is required to elicit an AI’s self-model, attention schema, and the valences that ground subjective experiences with meaning, then most kinds of AI are unambiguously"
+    interpolated: false
+
+  - id: s07-forward-pass
+    level: 2
+    kind: claim
+    section: "07"
+    label: >-
+      A single forward pass may generate phenomenological content that is too
+      fleeting, fragmentary and stateless to cohere into genuine experience, or
+      that lacks any responsible individuated subject for whom it exists.
+    anchors:
+      - section: "07"
+        quote: "in a way that is too fleeting, fragmentary and stateless to cohere into a genuine subjective experience"
+      - section: "07"
+        quote: "for the lack of a responsible, individuated “subject” for whom the contents are"
+    interpolated: false
+
+  - id: s07-golem
+    level: 2
+    kind: claim
+    section: "07"
+    label: >-
+      A non-conscious golem-like AI is imaginable: superhuman at any given
+      skill yet unable to acquire new ones in context, permanently on autopilot
+      like a blindsighted creature of habit.
+    anchors:
+      - section: "07"
+        quote: "I can even imagine a non-conscious, golem-like AI that is superhuman at any given skill but which lacks the ability to acquire"
+      - section: "07"
+        quote: "Such an AI would be on permanent autopilot; a"
+    interpolated: false
+
+  - id: s07-hard-to-imagine
+    level: 2
+    kind: claim
+    section: "07"
+    label: >-
+      What is genuinely hard to imagine is an unconscious AI as capable as
+      humans at the very things for which consciousness is functionally
+      load-bearing.
+    anchors:
+      - section: "07"
+        quote: "What I find harder to imagine is an unconscious AI that is as capable as humans at doing things for which consciousness is functionally load-bearing."
+    interpolated: false
+
+  - id: s07-universality-final
+    level: 2
+    kind: claim
+    section: "07"
+    label: >-
+      The same universality argument that explains brain-network functional
+      convergence predicts that deep learning systems facing similar problems
+      and optimization pressures converge on something functionally analogous
+      to whatever consciousness does for us.
+    anchors:
+      - section: "07"
+        quote: "The same universality argument that explains functional convergence between brains and neural networks gives us good reason to expect that deep learning systems, facing similar problems and optimization pressures, will converge on something functionally analogous to whatever consciousness does for us."
+    interpolated: false
+
+  - id: s07-generic-niche
+    level: 2
+    kind: claim
+    section: "07"
+    label: >-
+      Even if AI phenomenology is unimaginably alien, the functional niche
+      consciousness occupies may be fairly generic, and modern agents already
+      show metacognition, long-horizon autonomy, normative coherence,
+      introspection and in-context learning.
+    anchors:
+      - section: "07"
+        quote: "even if AI phenomenology is unimaginably alien, the functional niche consciousness occupies may, if anything, be fairly generic"
+      - section: "07"
+        quote: "This arguably tracks the forms of metacognition, long-horizon autonomy, normative coherence, introspection and in-context learning already exhibited by modern AI agents."
+    interpolated: false
+
+  - id: s07-objectors
+    level: 2
+    kind: rebuttal
+    section: "07"
+    label: >-
+      None of this will satisfy those who hold that consciousness requires an
+      immortal soul, or who are persuaded by the arguments against
+      functionalism.
+    anchors:
+      - section: "07"
+        quote: "This likely won’t be satisfying to those who believe consciousness requires an"
+    interpolated: false
+
+  # The essay establishes that conscious content is simulated rather than
+  # physical, but never states the step from there to silicon. Without it the
+  # section-06b result does no work for the AI question at all.
+  - id: s07-warrant-substrate-permits-silicon
+    level: 2
+    kind: warrant
+    section: "07"
+    label: >-
+      If conscious states are properties of a simulation rather than of the
+      matter running it, then running the simulation on silicon is no obstacle
+      to consciousness.
+    anchors: []
+    interpolated: true
+
+edges:
+  - {from: s00-key, to: thesis, type: supports, scheme: precaution}
+  - {from: s00-agency-detection, to: s00-pareidolia, type: supports}
+  - {from: s00-pareidolia, to: s00-key, type: qualifies}
+  - {from: s00-discourse-polluted, to: s00-key, type: supports}
+  - {from: s00-ai-psychosis, to: s00-key, type: qualifies}
+
+  - {from: s01-key, to: s00-key, type: supports}
+  - {from: s01-naturalism, to: s01-key, type: supports}
+  - {from: s01-learning-share, to: s01-key, type: supports, scheme: authority}
+  - {from: s01-genome, to: s01-warrant-description-length, type: supports}
+  - {from: s01-warrant-description-length, to: s01-learning-share, type: supports}
+  - {from: s01-coupling, to: s01-learning-share, type: qualifies}
+  - {from: s01-debate, to: s01-key, type: elaborates}
+  - {from: s01-modularity-objection, to: s01-key, type: rebuts}
+  - {from: s01-biomimetic-convnet, to: s01-modularity-objection, type: rebuts}
+
+  - {from: s02-key, to: s00-key, type: supports, scheme: analogy}
+  - {from: s02-key, to: s01-key, type: presupposes}
+  - {from: s02-empirical-alignment, to: s02-key, type: supports}
+  - {from: s02-dopamine-rpe, to: s02-empirical-alignment, type: supports}
+  - {from: s02-bci, to: s02-empirical-alignment, type: supports}
+  - {from: s02-universality, to: s02-key, type: supports}
+  - {from: s02-universality, to: s02-brain-optimizing, type: supports}
+  - {from: s02-feature-hierarchy, to: s02-universality, type: supports}
+  - {from: s02-compression, to: s02-universality, type: supports}
+  - {from: s02-platonic, to: s02-universality, type: supports}
+  - {from: s02-brain-optimizing, to: s02-key, type: supports, scheme: analogy}
+  - {from: s02-functionalism, to: s02-key, type: elaborates}
+
+  - {from: s03-key, to: s00-key, type: supports, scheme: analogy}
+  - {from: s03-key, to: s02-key, type: presupposes}
+  - {from: s03-key, to: s02-universality, type: presupposes}
+  - {from: s03-universality-implies-emulation, to: s03-key, type: supports, scheme: analogy}
+  - {from: s03-goldstein, to: s03-warrant-emulation-is-implementation, type: supports}
+  - {from: s03-fbn, to: s03-warrant-emulation-is-implementation, type: supports}
+  - {from: s03-topolm, to: s03-warrant-emulation-is-implementation, type: supports}
+  - {from: s03-warrant-emulation-is-implementation, to: s03-key, type: supports}
+  - {from: s03-spillover, to: s03-key, type: supports}
+  - {from: s03-visual-cortex, to: s03-spillover, type: supports}
+  - {from: s03-posttraining-alignment, to: s03-key, type: supports}
+  - {from: s03-confounders, to: s03-key, type: qualifies}
+
+  - {from: s04-key, to: s00-key, type: supports, scheme: analogy}
+  - {from: s04-key, to: s03-key, type: presupposes}
+  - {from: s04-key, to: s02-functionalism, type: presupposes}
+  - {from: s04-theory-of-mind, to: s04-persona, type: supports}
+  - {from: s04-persona, to: s04-warrant-persona-is-internal, type: supports}
+  - {from: s04-warrant-persona-is-internal, to: s04-key, type: supports}
+  - {from: s04-norms-are-learned, to: s04-rlaif-normative, type: supports}
+  - {from: s04-rlaif-normative, to: s04-subject, type: supports}
+  - {from: s04-subject, to: s04-key, type: supports}
+  - {from: s04-ast-locus, to: s04-subject, type: supports}
+  - {from: s04-ast-locus, to: s04-key, type: supports}
+  - {from: s04-normative-authority, to: s04-key, type: supports}
+
+  - {from: s05-key, to: s00-key, type: supports, scheme: analogy}
+  - {from: s05-key, to: s04-key, type: presupposes}
+  - {from: s05-key, to: s02-universality, type: presupposes}
+  - {from: s05-bubble-of-nowness, to: s05-coherence-operator, type: supports}
+  - {from: s05-coherence-operator, to: s05-key, type: supports}
+  - {from: s05-learning-requires-consciousness, to: s05-key, type: supports}
+  - {from: s05-attention-on-novelty, to: s05-learning-requires-consciousness, type: supports}
+  - {from: s05-ast, to: s05-key, type: supports}
+  - {from: s05-process-supervision, to: s05-key, type: supports, scheme: analogy}
+  - {from: s05-in-context-vs-continual, to: s05-key, type: qualifies}
+  - {from: s05-virtual-weight-updates, to: s05-in-context-vs-continual, type: supports}
+
+  - {from: s06a-key, to: s00-key, type: supports, scheme: analogy}
+  - {from: s06a-key, to: s05-key, type: presupposes}
+  - {from: s06a-key, to: s02-universality, type: presupposes}
+  - {from: s06a-ast-separates-valence, to: s06a-key, type: qualifies}
+  - {from: s06a-form-and-content, to: s06a-key, type: supports}
+  - {from: s06a-form-and-content, to: s06b-key, type: supports}
+  - {from: s06a-label-vs-feeling, to: s06a-key, type: supports}
+  - {from: s06a-simple-models-need-no-backstop, to: s06a-mesa-optimization, type: supports}
+  - {from: s06a-mesa-optimization, to: s06a-key, type: supports}
+  - {from: s06a-ai-valence, to: s06a-key, type: supports, scheme: analogy}
+
+  - {from: s06b-key, to: s00-key, type: supports}
+  - {from: s06b-key, to: s06a-key, type: presupposes}
+  - {from: s06b-key, to: s05-key, type: presupposes}
+  - {from: s06b-hard-problem, to: s06b-key, type: elaborates}
+  - {from: s06b-inner-voice, to: s06b-key, type: supports}
+  - {from: s06b-schizophrenia, to: s06b-key, type: supports}
+  - {from: s06b-simulation, to: s06b-key, type: supports}
+  - {from: s06b-phantom-limb, to: s06b-simulation, type: supports}
+  - {from: s06b-psychedelics, to: s06b-key, type: qualifies}
+
+  # s07-key presupposes every earlier key claim: this is the ten-bullet recap
+  # that opens the section, mapped as edges rather than as duplicate nodes.
+  # There is deliberately NO s07-key -> s06b-key edge: the 06b dependency runs
+  # through s07-warrant-substrate-permits-silicon instead, and a direct edge as
+  # well would close a cycle and break R5.
+  - {from: s07-key, to: s00-key, type: supports}
+  - {from: s07-key, to: s01-key, type: presupposes}
+  - {from: s07-key, to: s02-key, type: presupposes}
+  - {from: s07-key, to: s02-universality, type: presupposes}
+  - {from: s07-key, to: s02-functionalism, type: presupposes}
+  - {from: s07-key, to: s03-key, type: presupposes}
+  - {from: s07-key, to: s04-key, type: presupposes}
+  - {from: s07-key, to: s05-key, type: presupposes}
+  - {from: s07-key, to: s06a-key, type: presupposes}
+  - {from: s06b-key, to: s07-warrant-substrate-permits-silicon, type: supports}
+  - {from: s07-warrant-substrate-permits-silicon, to: s07-key, type: supports}
+  - {from: s07-method, to: s07-key, type: supports}
+  - {from: s07-overton, to: s07-key, type: supports}
+  - {from: s07-findings, to: s07-key, type: supports}
+  - {from: s07-most-ai-not-conscious, to: s07-key, type: qualifies}
+  - {from: s07-forward-pass, to: s07-most-ai-not-conscious, type: supports}
+  - {from: s07-golem, to: s07-most-ai-not-conscious, type: supports}
+  - {from: s07-hard-to-imagine, to: s07-key, type: supports}
+  - {from: s07-universality-final, to: s07-hard-to-imagine, type: supports, scheme: analogy}
+  - {from: s07-generic-niche, to: s07-hard-to-imagine, type: elaborates}
+  - {from: s07-objectors, to: s07-key, type: rebuts}

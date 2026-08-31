@@ -92,6 +92,17 @@ New values enter one at a time, when the mapping actually hits them
   ANN). Standard critical questions attach for the tutor and metric
   consumers: in what respects similar? are those respects relevant to
   the conclusion? are there relevant differences?
+- `authority` (on `supports`, entered 2026-08-31 during the full
+  mapping): the support rests on a named expert's reading rather than on
+  evidence the text itself presents — Byrnes's ">90% by volume" figure is
+  explicitly his "somewhat iconoclastic" reading of the neuroscience, and
+  the reader who forgets that mistakes one researcher's position for a
+  consensus result.
+- `precaution` (on `supports`, entered 2026-08-31 during the full
+  mapping): the support runs on "the harm is plausible and the cost of
+  being wrong is asymmetric → act now", which is the is→ought step of
+  this essay (and of any precautionary argument), and its attack surface
+  is entirely different from an evidential jump's.
 
 ```yaml
 edges:
