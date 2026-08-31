@@ -157,17 +157,22 @@ def phys_section(chunk):
 
 
 # --------------------------------------------------------------------------
-# minimap geometry, in user units of the 760x168 viewBox
+# minimap geometry, in user units of the 760x252 viewBox
 # --------------------------------------------------------------------------
 
-VB_W, VB_H = 760, 168
+VB_W, VB_H = 760, 252
 CELL_W, CELL_H, PITCH, CELL_X0 = 62, 24, 98, 6
 RAIL_T, RAIL_B = 102, 126
 ROOF_T, ROOF_B, ROOF_X, ROOF_W = 52, 76, 6, 748
 CAP_T, CAP_H, CAP_W = 4, 24, 72
 GLYPH_Y, GLYPH_R = 89, 7
 BAR_Y, BAR_W = 123, 54
-ARC_DEPTH_BASE, ARC_DEPTH_SPAN = 6.0, 4.4
+# The arc band is everything below RAIL_B. Its depth function is 3x the v2
+# original (was 6.0/4.4 in a 168-unit box): sixteen nested arcs in a ~42-unit
+# band read as a tangle and cannot be hover-targeted one by one, so the band
+# gets ~126 units instead and the seven nesting levels land 13.2 units apart.
+# Deepest arc: RAIL_B + BASE + SPAN*7 = 236.4, inside VB_H with room to spare.
+ARC_DEPTH_BASE, ARC_DEPTH_SPAN = 18.0, 13.2
 HIT_H = 44  # every node's invisible hit rect is at least 44 units tall
 
 
@@ -546,15 +551,29 @@ class SkeletonView(object):
                     if bypass_role[m] is None:
                         bypass_role[m] = "mid"
 
+            # One parent->child run has to read as ONE line, and it is drawn by
+            # three different rows, so each row states which part of its lane it
+            # owns ("up" = row top down to the marker line, "down" = marker line
+            # down to the row's bottom edge, "full" = both):
+            #   the parent row owns "down" in its OWN column, from its marker to
+            #     its bottom edge - without it the run started below the parent;
+            #   every row in between owns "full";
+            #   each child owns "up" in the parent's column, meeting its elbow -
+            #     without it the run stopped short of the last child's elbow.
+            # Rows abut exactly (no margins), so the three parts join seamlessly
+            # whatever a multi-line label does to the row heights.
             cont = {}
             meta = []
             for i, row in enumerate(rows):
                 d = row["depth"]
                 cont[d] = not last[i]
-                verticals = [LANE_X0 + LANE_PITCH * (a - 1)
+                verticals = [(LANE_X0 + LANE_PITCH * (a - 1), "full")
                              for a in range(1, d) if cont.get(a)]
-                if d and cont[d]:
-                    verticals.append(LANE_X0 + LANE_PITCH * (d - 1))
+                if d:
+                    verticals.append((LANE_X0 + LANE_PITCH * (d - 1),
+                                      "full" if cont[d] else "up"))
+                if kids.get(i):
+                    verticals.append((LANE_X0 + LANE_PITCH * d, "down"))
                 meta.append({
                     "row": row, "i": i, "depth": d, "parent": parent[i],
                     "last": last[i], "verticals": verticals,
@@ -658,7 +677,7 @@ class SkeletonView(object):
             head = "sk-head sk-hollow" if arc["deep"] else "sk-head"
             add('<g class="sk-arc%s" data-arc="%s">'
                 '<path class="sk-arcline" d="%s" stroke-width="%s"/>'
-                '<path class="sk-hit-e" d="%s"/>'
+                '<path class="sk-hit-e sk-hit-a" d="%s"/>'
                 '<path class="%s" d="M%s 127 L%s 133 L%s 133 Z"/></g>'
                 % (live, arc["key"], arc["d"], width, arc["d"], head,
                    _n(arc["hx"]), _n(arc["hx"] - 2.8), _n(arc["hx"] + 2.8)))
@@ -953,7 +972,9 @@ class SkeletonView(object):
             if node.get("interpolated") is True:
                 classes.append("sk-interp")
             verticals = "".join(
-                '<i class="skel-lane" style="left:%dpx"></i>' % x for x in m["verticals"])
+                '<i class="skel-lane%s" style="left:%dpx"></i>'
+                % ("" if kind == "full" else " sk-l-" + kind, x)
+                for x, kind in m["verticals"])
             role = m["bypass"]
             if role:
                 cls = {"start-down": "sk-bp-down", "end-up": "sk-bp-down",
@@ -1248,6 +1269,9 @@ svg.skel-map .sk-hot{opacity:1}
 /* hit areas */
 .sk-hit{fill:transparent;stroke:none;cursor:pointer}
 .sk-hit-e{fill:none;stroke:transparent;stroke-width:14;pointer-events:none}
+/* Arcs nest 13.2 units apart, so their hit stroke has to stay under that or
+   two neighbouring nesting levels would share one hover target. */
+.sk-hit-a{stroke-width:11}
 svg.skel-map .sk-arc:hover .sk-arcline,svg.skel-map .sk-fan:hover .sk-fanline{
   stroke:var(--accent)}
 @media (hover:hover) and (pointer:fine){
@@ -1330,8 +1354,13 @@ svg.skel-thumb{flex:0 0 auto;width:124px;height:auto;max-height:86px}
   align-items:start;min-height:40px;font-size:14.5px;line-height:1.5}
 .skel-llabel{grid-column:2;padding:3px 8px 3px 0}
 .skel-lrow .skel-quote{grid-column:3}
-.skel-lane{position:absolute;top:0;bottom:0;width:1px;background:var(--sk-line);
-  pointer-events:none}
+/* Width and offset mirror the SVG elbow's stroke-width:1.5 centred on the lane
+   axis, so the CSS vertical and the elbow it joins are the same line. */
+.skel-lane{position:absolute;top:0;bottom:0;width:1.5px;margin-left:-.75px;
+  background:var(--sk-line);pointer-events:none}
+/* the three parts of one parent->child run; see _derive_lanes() */
+.skel-lane.sk-l-up{bottom:auto;height:var(--sk-mark)}
+.skel-lane.sk-l-down{top:var(--sk-mark)}
 .skel-lane.sk-bp-down{top:var(--sk-mark);bottom:0}
 .skel-lane.sk-bp-up{top:0;height:var(--sk-mark)}
 .skel-lane.sk-bp-mid{top:0;bottom:0}
@@ -1546,9 +1575,17 @@ SKEL_JS = r"""
   }
 
   /* ---- shared hover card ------------------------------------------- */
+  // An empty card is always a bug in the caller, never a state worth showing:
+  // #tip would render as a bare × floating over the page. Refuse to open, and
+  // drop whatever was open, so the reader never sees a card with no content.
+  function hasContent(inner){
+    return !!inner && String(inner).replace(/<[^>]*>/g, '').trim() !== '';
+  }
   function openTip(el, inner, key){
+    if (!hasContent(inner)){ closeTip(); return false; }
     cardKey = key || null;
     if (window.SKEL_TIP) window.SKEL_TIP.open(el, inner);
+    return true;
   }
   function closeTip(){ cardKey = null; if (window.SKEL_TIP) window.SKEL_TIP.close(); }
   function tipShows(key){
@@ -1589,8 +1626,12 @@ SKEL_JS = r"""
       out += '<span class="skel-word">' +
              esc(SKEL.schemeNames[meta.scheme] || meta.scheme) + '</span>';
     }
+    // Both rows name the direction of dependence, from this chunk's point of
+    // view: `up` is what it rests on, `down` is what rests on it. "ezt
+    // használja" read as if THIS chunk used the listed ones - the arrow the
+    // wrong way round.
     out += chunkRow('mire épül:', meta.up);
-    out += chunkRow('ezt használja:', meta.down);
+    out += chunkRow('építenek rá:', meta.down);
     out += '<span class="skel-actions">' +
            '<button type="button" class="skel-goto skel-keep" data-skel-travel="' +
            esc(chunk) + '">→ elejére</button>' +
@@ -1872,13 +1913,22 @@ SKEL_JS = r"""
   // Desktop: hovering a node opens its card after a beat; clicking navigates.
   // Touch: the first tap opens the card, the second tap on the same node
   // navigates. Both paths go through the same two functions.
-  function openNode(el, chunk){
-    openTip(el, nodeCard(chunk), 'node:' + chunk);
-    var svg = el.closest ? el.closest('svg.skel-map') : null;
-    if (chunk !== 'thesis') lightIncident(svg, chunk);
+  // `data-skel-node` carries two different vocabularies: a CHUNK id inside the
+  // minimap, a NODE id everywhere else (the detail view's row markers, the list
+  // view's second-parent chips). Which card to build follows from WHERE the
+  // affordance sits, never from guessing at the id - reading it as a chunk id
+  // outside the map is what used to hand nodeCard() an unknown key and open an
+  // empty card.
+  function mapOf(el){ return (el && el.closest) ? el.closest('svg.skel-map') : null; }
+  function openNode(el, id){
+    var svg = mapOf(el);
+    if (!svg) return openTip(el, markerCard(id), 'mark:' + id);
+    var opened = openTip(el, nodeCard(id), 'node:' + id);
+    if (id !== 'thesis') lightIncident(svg, id);
+    return opened;
   }
   function nodeActivate(el, chunk){
-    if (chunk === 'thesis'){ openNode(el, chunk); return; }
+    if (chunk === 'thesis' || !mapOf(el)){ openNode(el, chunk); return; }
     if (tipShows('node:' + chunk)){ travel(chunk, originOf(el)); return; }
     openNode(el, chunk);
   }
@@ -1907,8 +1957,7 @@ SKEL_JS = r"""
             if (f) SKEL.arcs[key] = {a: c, b: SKEL.roof, edges: f};
           }
         }
-        openTip(edge, edgeCard(key), 'edge:' + key);
-        edge.classList.add('sk-hot');
+        if (openTip(edge, edgeCard(key), 'edge:' + key)) edge.classList.add('sk-hot');
       }
     });
     document.addEventListener('mouseout', function(ev){
@@ -1926,12 +1975,12 @@ SKEL_JS = r"""
     if (nodeHit){
       var chunk = nodeHit.getAttribute('data-skel-node');
       if (nodeHit.classList.contains('skel-mark')){
-        openTip(nodeHit, markerCard(chunk), 'mark:' + chunk);
+        openNode(nodeHit, chunk);
         var row = nodeHit.closest('.skel-lrow');
         if (row) activateRow(row);
         return;
       }
-      if (finePointer && nodeHit.closest('svg.skel-map')){
+      if (finePointer && mapOf(nodeHit)){
         if (chunk === 'thesis') openNode(nodeHit, chunk);
         else travel(chunk, originOf(nodeHit));
         return;
